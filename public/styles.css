@@ -476,6 +476,73 @@ input { font-family: inherit; font-size: inherit; color: inherit; background: no
 .lp-tag.host { background: rgba(212,166,74,.15); color: var(--gold); }
 .lp-tag.you  { background: rgba(74,212,138,.15); color: var(--green); }
 .lp-tag.off  { background: rgba(200,64,56,.15); color: var(--fascist-glow); }
+.lp-tag.bot  { background: rgba(106,176,245,.15); color: var(--liberal-glow); }
+.lobby-player.bot .lp-avatar {
+  background: linear-gradient(135deg, rgba(74,144,217,.4), rgba(74,144,217,.1));
+  border-color: var(--liberal);
+}
+.lobby-player.bot .lp-avatar::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%236ab0f5'><path d='M12 2a2 2 0 0 1 2 2v2h2a4 4 0 0 1 4 4v8a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4v-8a4 4 0 0 1 4-4h2V4a2 2 0 0 1 2-2zm-3 10a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1zm6 0a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1z'/></svg>") center/60% no-repeat;
+  opacity: .5;
+}
+.lobby-player.bot .lp-avatar { position: relative; overflow: hidden; }
+.lobby-player.bot .lp-avatar > * { display: none; }
+
+.bot-controls {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  background: var(--bg-2);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 6px;
+}
+.ghost-btn {
+  flex: 1;
+  padding: 10px 14px;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  transition: all var(--t-fast);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.ghost-btn:hover {
+  color: var(--liberal-glow);
+  border-color: var(--liberal);
+  background: rgba(74,144,217,.08);
+}
+.ghost-btn:disabled { opacity: .35; cursor: not-allowed; }
+.ghost-btn-sm { flex: 0 0 auto; padding: 10px 12px; }
+.ghost-icon { font-size: 16px; line-height: 1; font-weight: 700; }
+
+/* Bot indicator on player pills in the game */
+.player-pill.bot::before {
+  content: 'AI';
+  position: absolute;
+  bottom: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  background: var(--liberal);
+  color: #061a2c;
+  padding: 1px 6px;
+  border-radius: 4px;
+  z-index: 1;
+}
 
 .lobby-need {
   text-align: center;
@@ -705,6 +772,13 @@ input { font-family: inherit; font-size: inherit; color: inherit; background: no
   gap: 16px;
   overflow-y: auto;
 }
+.game-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  flex: 1;
+}
 
 /* === Boards === */
 .boards { display: flex; flex-direction: column; gap: 8px; }
@@ -719,6 +793,87 @@ input { font-family: inherit; font-size: inherit; color: inherit; background: no
 }
 .liberal-board { border-color: rgba(74,144,217,.3); background: linear-gradient(180deg, rgba(20,40,63,.4), rgba(20,40,63,.15)); }
 .fascist-board { border-color: rgba(200,64,56,.3); background: linear-gradient(180deg, rgba(46,20,20,.4), rgba(46,20,20,.15)); }
+.tracker-board {
+  border-color: rgba(212,166,74,.25);
+  background: linear-gradient(180deg, rgba(40,30,10,.35), rgba(40,30,10,.1));
+  cursor: help;
+  position: relative;
+}
+.tracker-board .board-label { color: var(--gold-glow); }
+.tracker-board[data-tooltip]:hover::before {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-card);
+  color: var(--text);
+  padding: 10px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+  font-size: 11px;
+  line-height: 1.45;
+  width: max-content;
+  max-width: 320px;
+  box-shadow: var(--shadow-md);
+  pointer-events: none;
+  z-index: 50;
+  text-align: center;
+  animation: tooltipInDown 160ms ease-out both;
+}
+@keyframes tooltipInDown {
+  from { opacity: 0; transform: translateX(-50%) translateY(-4px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.tracker-track {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  justify-content: center;
+}
+.tracker-track .tracker-cell {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.04);
+  border: 1.5px solid rgba(212,166,74,.25);
+  transition: all var(--t-med);
+}
+.tracker-track .tracker-cell.active {
+  background: linear-gradient(180deg, var(--fascist) 0%, #7a2620 100%);
+  border-color: var(--fascist-glow);
+  box-shadow: 0 0 12px rgba(255,90,74,.5), inset 0 0 6px rgba(255,255,255,.15);
+}
+.tracker-track .tracker-cell.warning {
+  animation: trackerPulse 1.2s ease-in-out infinite;
+}
+@keyframes trackerPulse {
+  0%, 100% {
+    border-color: rgba(255,90,74,.5);
+    box-shadow: 0 0 8px rgba(255,90,74,.3);
+  }
+  50% {
+    border-color: var(--fascist-glow);
+    box-shadow: 0 0 16px rgba(255,90,74,.7);
+    transform: scale(1.08);
+  }
+}
+.tracker-count {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text-faint);
+  letter-spacing: 1px;
+  flex-shrink: 0;
+  min-width: 48px;
+  text-align: right;
+}
+.tracker-count.warning {
+  color: var(--fascist-glow);
+  text-shadow: 0 0 8px rgba(255,90,74,.5);
+}
 .board-label {
   font-family: 'Cinzel', serif;
   font-weight: 700;
@@ -761,16 +916,96 @@ input { font-family: inherit; font-size: inherit; color: inherit; background: no
   border-color: var(--fascist-glow);
   box-shadow: 0 0 12px rgba(255,90,74,.5), inset 0 0 12px rgba(255,255,255,.15);
 }
+.policy-cell .cell-num {
+  position: absolute;
+  top: 4px;
+  left: 6px;
+  font-family: 'Cinzel', serif;
+  font-size: 11px;
+  opacity: .4;
+  z-index: 1;
+}
+.policy-cell.filled .cell-num { opacity: 0; }
+
+/* Power icon: centered circle with SVG */
 .policy-cell .power-icon {
   position: absolute;
-  bottom: 2px;
-  right: 2px;
-  font-size: 9px;
-  opacity: .65;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 60%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: rgba(212,166,74,.10);
+  border: 1px solid rgba(212,166,74,.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gold);
+  transition: all var(--t-fast);
+  z-index: 0;
+}
+.policy-cell .power-icon svg {
+  width: 65%;
+  height: 65%;
+  display: block;
+}
+.fascist-board .policy-cell .power-icon {
+  background: rgba(255,90,74,.10);
+  border-color: rgba(255,90,74,.35);
+  color: var(--fascist-glow);
+}
+.policy-cell .power-icon.win-icon {
+  background: rgba(212,166,74,.18);
+  border-color: var(--gold);
+  color: var(--gold-glow);
 }
 .policy-cell.filled .power-icon { opacity: 0; }
-.policy-cell .cell-num { font-family: 'Cinzel', serif; opacity: .5; }
-.policy-cell.filled .cell-num { opacity: 0; }
+
+/* Cell hover: lift and brighten the icon */
+.policy-cell[data-power]:not(.filled) { cursor: help; }
+.policy-cell[data-power]:not(.filled):hover .power-icon {
+  background: rgba(212,166,74,.25);
+  border-color: var(--gold);
+  color: var(--gold-glow);
+  transform: translate(-50%, -50%) scale(1.12);
+  box-shadow: 0 0 12px rgba(212,166,74,.5);
+}
+.fascist-board .policy-cell[data-power]:not(.filled):hover .power-icon {
+  background: rgba(255,90,74,.25);
+  border-color: var(--fascist-glow);
+  color: var(--fascist-glow);
+  box-shadow: 0 0 12px rgba(255,90,74,.5);
+}
+
+/* Hover tooltip */
+.policy-cell[data-tooltip]:not(.filled):hover::before {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-card);
+  color: var(--text);
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+  font-size: 11px;
+  letter-spacing: .3px;
+  line-height: 1.4;
+  white-space: normal;
+  width: max-content;
+  max-width: 220px;
+  box-shadow: 0 8px 16px rgba(0,0,0,.5), 0 2px 4px rgba(0,0,0,.4);
+  pointer-events: none;
+  z-index: 50;
+  text-align: center;
+  animation: tooltipIn 160ms ease-out both;
+}
+@keyframes tooltipIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(4px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
 .policy-cell.filled::after {
   content: '';
   position: absolute;
@@ -890,6 +1125,28 @@ input { font-family: inherit; font-size: inherit; color: inherit; background: no
   bottom: -4px;
   right: -4px;
   font-size: 14px;
+}
+
+/* Confirmed-not-Hitler indicator (after Chancellor passes vote with 3+ Fascist policies) */
+.player-pill.not-hitler .player-avatar {
+  position: relative;
+}
+.player-pill.not-hitler .player-avatar::before {
+  content: '✓';
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--liberal);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--bg-card);
 }
 
 .player-name {
@@ -1065,14 +1322,127 @@ input { font-family: inherit; font-size: inherit; color: inherit; background: no
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: var(--bg-card);
+  gap: 16px;
+  background: linear-gradient(180deg, var(--bg-card), var(--bg-1));
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: 12px 16px;
+  padding: 16px;
 }
-.deck-pile { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.pile-label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-faint); }
-.pile-count { font-weight: 700; font-size: 18px; font-family: 'Cinzel', serif; }
+.deck-pile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.pile-label {
+  font-family: 'Cinzel', serif;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* ----- Card stack ----- */
+.card-stack {
+  position: relative;
+  width: 60px;
+  height: 84px; /* 1 : 1.4 ratio */
+  flex-shrink: 0;
+}
+.card-stack .card-back {
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  background-color: #2e0a0a;
+  background-image:
+    radial-gradient(ellipse at 50% 50%, rgba(212,166,74,0.18) 0%, transparent 55%),
+    linear-gradient(135deg, #5a1814 0%, #1a0606 100%);
+  border: 1.5px solid rgba(212, 166, 74, 0.6);
+  box-shadow: 0 4px 12px rgba(0,0,0,.5), inset 0 0 8px rgba(0,0,0,.4);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform var(--t-fast);
+}
+.card-stack .card-back::before {
+  /* inner deco border */
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border: 1px solid rgba(212, 166, 74, 0.35);
+  border-radius: 3px;
+  pointer-events: none;
+}
+.card-stack .card-back::after {
+  /* central emblem */
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><g opacity='0.85'><circle cx='32' cy='32' r='22' fill='none' stroke='%23d4a64a' stroke-width='1.5'/><circle cx='32' cy='32' r='17' fill='none' stroke='%23d4a64a' stroke-width='0.5' opacity='0.5'/><path d='M22 28 L32 38 L42 28' stroke='%23d4a64a' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/><circle cx='32' cy='44' r='2' fill='%23d4a64a'/><line x1='32' y1='6' x2='32' y2='12' stroke='%23d4a64a' stroke-width='0.8' opacity='0.5'/><line x1='32' y1='52' x2='32' y2='58' stroke='%23d4a64a' stroke-width='0.8' opacity='0.5'/><line x1='6' y1='32' x2='12' y2='32' stroke='%23d4a64a' stroke-width='0.8' opacity='0.5'/><line x1='52' y1='32' x2='58' y2='32' stroke='%23d4a64a' stroke-width='0.8' opacity='0.5'/></g></svg>");
+  background-size: 70%;
+  background-position: center;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+
+/* Stacked layers behind the top card */
+.card-stack .card-back-faded:nth-child(1) {
+  transform: translate(-4px, 4px) rotate(-3deg);
+  opacity: 0.45;
+  z-index: 1;
+}
+.card-stack .card-back-faded:nth-child(2) {
+  transform: translate(-2px, 2px) rotate(-1.5deg);
+  opacity: 0.7;
+  z-index: 2;
+}
+.card-stack .card-back:not(.card-back-faded) {
+  z-index: 3;
+}
+
+/* Card count overlay */
+.card-stack .card-count {
+  position: relative;
+  z-index: 4;
+  font-family: 'Cinzel', serif;
+  font-weight: 800;
+  font-size: 22px;
+  color: var(--gold-glow);
+  text-shadow: 0 2px 8px rgba(0,0,0,.8), 0 0 16px rgba(212,166,74,.4);
+  background: rgba(0,0,0,.55);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(212, 166, 74, 0.5);
+}
+
+/* Discard pile slightly more muted */
+.card-stack[data-kind="discard"] .card-back {
+  background-image:
+    radial-gradient(ellipse at 50% 50%, rgba(212,166,74,0.08) 0%, transparent 55%),
+    linear-gradient(135deg, #2a0e0c 0%, #100404 100%);
+  border-color: rgba(212, 166, 74, 0.35);
+}
+.card-stack[data-kind="discard"] .card-back::after { opacity: 0.55; }
+.card-stack[data-kind="discard"] .card-count {
+  color: var(--gold);
+  opacity: 0.85;
+}
+
+/* Pulse the deck briefly when it changes */
+.card-stack.pulse .card-back:not(.card-back-faded) {
+  animation: deckPulse 600ms ease-out;
+}
+@keyframes deckPulse {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.06); box-shadow: 0 0 24px rgba(212,166,74,.5), 0 4px 12px rgba(0,0,0,.5); }
+  100% { transform: scale(1); }
+}
 
 .election-tracker { display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .tracker-label { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-faint); }
@@ -1093,20 +1463,44 @@ input { font-family: inherit; font-size: inherit; color: inherit; background: no
 
 .vote-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-  gap: 10px;
-  margin-top: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 6px;
+  margin-top: 10px;
 }
 .vote-cell {
   background: var(--bg-2);
-  border-radius: var(--radius-sm);
-  padding: 12px 8px;
-  text-align: center;
+  border-radius: 6px;
+  padding: 6px 10px;
   border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
-.vote-cell .vname { font-size: 12px; font-weight: 600; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.vote-cell .vresult { font-family: 'Cinzel', serif; font-weight: 800; font-size: 16px; letter-spacing: 2px; }
+.vote-cell .vname {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+.vote-cell .vresult {
+  font-family: 'Cinzel', serif;
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  flex-shrink: 0;
+}
+.vote-cell.ja {
+  border-color: rgba(74,144,217,.35);
+}
 .vote-cell.ja .vresult { color: var(--liberal-glow); }
+.vote-cell.nein {
+  border-color: rgba(200,64,56,.35);
+}
 .vote-cell.nein .vresult { color: var(--fascist-glow); }
 
 /* =========================================================
@@ -1286,6 +1680,187 @@ input { font-family: inherit; font-size: inherit; color: inherit; background: no
 .log-entry.policy-fasc { border-left-color: var(--fascist); }
 .log-entry.death { border-left-color: var(--fascist); color: var(--fascist-glow); }
 
+/* ===== History timeline ===== */
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 65vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.history-empty {
+  text-align: center;
+  color: var(--text-faint);
+  padding: 24px;
+  font-style: italic;
+  font-size: 13px;
+}
+
+.history-round {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  gap: 10px;
+  padding: 6px 0;
+  border-top: 1px solid var(--border);
+}
+.history-round:first-child { border-top: none; }
+.history-round-num {
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--gold);
+  letter-spacing: 1px;
+  padding-top: 8px;
+  text-align: right;
+}
+.history-events {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.history-event {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border-strong);
+  border-radius: 0 6px 6px 0;
+  padding: 8px 12px;
+  font-size: 13px;
+  min-width: 0;
+}
+.history-event .he-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  flex-shrink: 0;
+  background: var(--bg-3);
+}
+.history-event .he-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.history-event .he-line1 {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+}
+.history-event .he-line2 {
+  font-size: 11px;
+  color: var(--text-faint);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.history-event .he-pres { color: var(--gold); font-weight: 600; }
+.history-event .he-chan { color: var(--liberal-glow); font-weight: 600; }
+.history-event .he-target { color: var(--text); font-weight: 600; }
+.history-event .he-tally {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--text-dim);
+  flex-shrink: 0;
+  background: var(--bg-3);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.history-event.enactment-liberal,
+.history-event.enactment-fascist,
+.history-event.chaos {
+  align-items: center;
+}
+.history-event.enactment-liberal .he-icon,
+.history-event.enactment-fascist .he-icon,
+.history-event.chaos .he-icon {
+  width: 26px;
+  height: 36px;
+  border-radius: 4px;
+  border: 1.5px solid;
+  font-size: 14px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.5);
+}
+.history-event.enactment-liberal {
+  border-left-color: var(--liberal);
+  background: linear-gradient(90deg, rgba(74,144,217,.1), var(--bg-2) 35%);
+}
+.history-event.enactment-liberal .he-icon {
+  background: linear-gradient(180deg, var(--liberal) 0%, #14283f 100%);
+  border-color: var(--liberal-glow);
+  color: #cae3ff;
+}
+.history-event.enactment-fascist {
+  border-left-color: var(--fascist);
+  background: linear-gradient(90deg, rgba(200,64,56,.1), var(--bg-2) 35%);
+}
+.history-event.enactment-fascist .he-icon {
+  background: linear-gradient(180deg, var(--fascist) 0%, #2e1414 100%);
+  border-color: var(--fascist-glow);
+  color: #ffcec8;
+}
+
+.history-event.failed { border-left-color: var(--text-faint); opacity: 0.75; }
+.history-event.failed .he-icon { background: var(--bg-3); color: var(--text-faint); }
+
+.history-event.chaos {
+  border-left-color: var(--fascist-glow);
+  background: linear-gradient(90deg, rgba(255,90,74,.18), var(--bg-2) 40%);
+}
+.history-event.chaos .he-icon {
+  background: linear-gradient(180deg, #ff5a4a 0%, #4a1010 100%);
+  border-color: var(--fascist-glow);
+  color: white;
+}
+
+.history-event.veto { border-left-color: var(--gold); }
+.history-event.veto .he-icon { background: var(--gold); color: #1a1206; }
+
+.history-event.power-investigate { border-left-color: var(--liberal); }
+.history-event.power-investigate .he-icon { background: var(--liberal); }
+.history-event.power-peek { border-left-color: var(--liberal-glow); }
+.history-event.power-peek .he-icon { background: var(--liberal-glow); color: #061a2c; }
+.history-event.power-specialElection { border-left-color: var(--gold); }
+.history-event.power-specialElection .he-icon { background: var(--gold); color: #1a1206; }
+.history-event.power-execution {
+  border-left-color: var(--fascist);
+  background: linear-gradient(90deg, rgba(200,64,56,.12), var(--bg-2) 40%);
+}
+.history-event.power-execution .he-icon { background: var(--fascist); color: white; }
+
+/* Tabs in history modal */
+.modal-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.modal-tab {
+  padding: 8px 14px;
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all var(--t-fast);
+}
+.modal-tab.active {
+  color: var(--gold);
+  border-bottom-color: var(--gold);
+}
+.modal-tab:hover { color: var(--text); }
+
 /* =========================================================
    TOAST
    ========================================================= */
@@ -1320,9 +1895,273 @@ input { font-family: inherit; font-size: inherit; color: inherit; background: no
    RESPONSIVE
    ========================================================= */
 @media (min-width: 768px) {
-  .game-main { padding: 24px; max-width: 880px; margin: 0 auto; width: 100%; }
+  .game-main {
+    padding: 24px;
+    max-width: 1480px;
+    margin: 0 auto;
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 470px;
+    align-items: start;
+    gap: 24px;
+    overflow: hidden;  /* let inner panels manage their own scroll */
+  }
+  .game-content {
+    min-width: 0;
+    overflow-y: auto;
+    max-height: calc(100vh - 110px);
+    padding-right: 4px;
+  }
+  /* Right rail: deck on the left, history beside it */
+  .game-side {
+    display: grid;
+    grid-template-columns: 130px minmax(0, 1fr);
+    gap: 14px;
+    position: sticky;
+    top: 0;
+    align-self: start;
+    max-height: calc(100vh - 110px);
+    min-height: 0;
+  }
+
+  /* Compact policy boards: fixed-width cells, left-aligned */
+  .board {
+    padding: 12px 16px;
+  }
+  .board-label {
+    width: 70px;
+  }
+  .liberal-board .board-track,
+  .fascist-board .board-track {
+    display: flex;
+    flex: 1;
+    gap: 8px;
+    justify-content: flex-start;
+    align-items: center;
+  }
+  .tracker-board {
+    padding: 8px 16px;
+  }
+  .tracker-board .board-label {
+    width: 70px;
+    line-height: 1.15;
+  }
+  .tracker-track .tracker-cell {
+    width: 26px;
+    height: 26px;
+  }
+  .policy-cell {
+    flex: 0 0 56px;
+    width: 56px;
+    aspect-ratio: 1 / 1.4;
+    border-radius: 5px;
+  }
+  .policy-cell .cell-num {
+    font-size: 12px;
+  }
+  .deck-info {
+    flex-direction: column;
+    padding: 14px 10px;
+    gap: 16px;
+    flex-shrink: 0;
+    min-height: 0;
+  }
+  .deck-info .card-stack {
+    width: 76px;
+    height: 106px;
+  }
+  .deck-info .card-stack .card-count {
+    width: 38px;
+    height: 38px;
+    font-size: 20px;
+  }
+  .deck-info .pile-label {
+    font-size: 10px;
+    letter-spacing: 1.5px;
+  }
+  .deck-info .election-tracker {
+    padding: 8px 0;
+    border-top: 1px dashed var(--border);
+    border-bottom: 1px dashed var(--border);
+    width: 100%;
+  }
+  .deck-info .tracker-label {
+    font-size: 9px;
+    letter-spacing: 1.2px;
+    text-align: center;
+    line-height: 1.2;
+  }
+  .deck-info .tracker-dots {
+    margin-top: 4px;
+  }
+  .deck-info .tracker-dots .dot {
+    width: 12px;
+    height: 12px;
+  }
+
+  /* Side history panel: compact rounds list, latest on top */
+  .side-history {
+    background: linear-gradient(180deg, var(--bg-card), var(--bg-1));
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 14px 14px 10px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
+  }
+  .side-history h3 {
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 12px;
+    flex-shrink: 0;
+    text-align: center;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .side-history-list {
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-right: 4px;
+    flex: 1;
+    min-height: 0;
+  }
+
   .player-pill { padding: 14px 12px; }
   .player-avatar { width: 52px; height: 52px; font-size: 18px; }
+}
+
+/* Side-history rows (used inside the right rail) */
+.se-empty {
+  color: var(--text-faint);
+  font-size: 12px;
+  text-align: center;
+  padding: 20px 8px;
+  font-style: italic;
+}
+.se-row {
+  display: grid;
+  grid-template-columns: 26px 22px 1fr;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 8px 6px 6px;
+  background: var(--bg-2);
+  border-left: 3px solid var(--border-strong);
+  border-radius: 0 6px 6px 0;
+  font-size: 11px;
+  animation: seRowIn 280ms cubic-bezier(.4,0,.2,1) both;
+}
+@keyframes seRowIn {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.se-round {
+  font-family: 'Cinzel', serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  color: var(--gold);
+  text-align: center;
+}
+.se-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--bg-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  line-height: 1;
+}
+.se-body { min-width: 0; }
+.se-line1 {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 11px;
+}
+.se-line2 {
+  font-size: 9px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Enactment + chaos rows: replace the circular icon with a mini policy card so
+   the placed color is unmistakable. */
+.se-row.enactment-liberal,
+.se-row.enactment-fascist,
+.se-row.chaos {
+  align-items: center;
+}
+.se-row.enactment-liberal .se-icon,
+.se-row.enactment-fascist .se-icon,
+.se-row.chaos .se-icon {
+  width: 22px;
+  height: 30px;
+  border-radius: 3px;
+  border: 1.5px solid;
+  font-size: 12px;
+  position: relative;
+  box-shadow: 0 1px 4px rgba(0,0,0,.45);
+}
+.se-row.enactment-liberal {
+  border-left-color: var(--liberal);
+  background: linear-gradient(90deg, rgba(74,144,217,.1), var(--bg-2) 50%);
+}
+.se-row.enactment-liberal .se-icon {
+  background: linear-gradient(180deg, var(--liberal) 0%, #14283f 100%);
+  border-color: var(--liberal-glow);
+  color: #cae3ff;
+}
+.se-row.enactment-fascist {
+  border-left-color: var(--fascist);
+  background: linear-gradient(90deg, rgba(200,64,56,.1), var(--bg-2) 50%);
+}
+.se-row.enactment-fascist .se-icon {
+  background: linear-gradient(180deg, var(--fascist) 0%, #2e1414 100%);
+  border-color: var(--fascist-glow);
+  color: #ffcec8;
+}
+.se-row.failed { border-left-color: var(--text-faint); opacity: .7; }
+.se-row.chaos {
+  border-left-color: var(--fascist-glow);
+  background: linear-gradient(90deg, rgba(255,90,74,.18), var(--bg-2) 60%);
+}
+.se-row.chaos .se-icon {
+  background: linear-gradient(180deg, #ff5a4a 0%, #4a1010 100%);
+  border-color: var(--fascist-glow);
+  color: white;
+}
+.se-row.veto { border-left-color: var(--gold); }
+.se-row.veto .se-icon { background: var(--gold); color: #1a1206; }
+.se-row.power-investigate { border-left-color: var(--liberal); }
+.se-row.power-investigate .se-icon { background: var(--liberal); color: white; }
+.se-row.power-peek { border-left-color: var(--liberal-glow); }
+.se-row.power-peek .se-icon { background: var(--liberal-glow); color: #061a2c; }
+.se-row.power-specialElection { border-left-color: var(--gold); }
+.se-row.power-specialElection .se-icon { background: var(--gold); color: #1a1206; }
+.se-row.power-execution {
+  border-left-color: var(--fascist);
+  background: linear-gradient(90deg, rgba(200,64,56,.08), var(--bg-2) 60%);
+}
+.se-row.power-execution .se-icon { background: var(--fascist); color: white; }
+.se-row.notHitler { border-left-color: var(--liberal); }
+.se-row.notHitler .se-icon { background: var(--liberal); color: white; }
+.se-row.fresh {
+  box-shadow: 0 0 0 1px var(--gold) inset, 0 0 12px rgba(212,166,74,.3);
 }
 @media (max-width: 380px) {
   .players-ring { grid-template-columns: repeat(2, 1fr); }

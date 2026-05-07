@@ -111,6 +111,17 @@
 
       <div class="lobby-actions">
         <button id="btn-start" class="primary-btn" disabled>Begin Game</button>
+        <div id="bot-controls" class="bot-controls hidden">
+          <button id="btn-add-bot" class="ghost-btn">
+            <span class="ghost-icon">+</span> Add AI Player
+          </button>
+          <button id="btn-remove-bot" class="ghost-btn ghost-btn-sm" title="Remove last AI">
+            <span class="ghost-icon">−</span>
+          </button>
+          <button id="btn-fill-bots" class="ghost-btn ghost-btn-sm" title="Fill to 5 players">
+            Fill 5
+          </button>
+        </div>
         <button id="btn-leave" class="secondary-btn">Leave Room</button>
       </div>
     </div>
@@ -154,44 +165,71 @@
         <button id="btn-myrole" class="icon-btn" aria-label="My role" title="My role">
           <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5zm-3 8V7a3 3 0 1 1 6 0v3z"/></svg>
         </button>
-        <button id="btn-log" class="icon-btn" aria-label="Game log">
-          <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm2 18H6V4h7v5h5z"/></svg>
+        <button id="btn-log" class="icon-btn" aria-label="History" title="History">
+          <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M13 3a9 9 0 1 0 9 9h-2a7 7 0 1 1-7-7v3l5-4-5-4v3zm-1 5v5l4 2 1-1.5-3.5-2V8z"/></svg>
         </button>
       </div>
     </header>
 
     <main class="game-main">
-      <div class="boards">
-        <div class="board liberal-board">
-          <div class="board-label">Liberal</div>
-          <div class="board-track" id="liberal-track"></div>
-        </div>
-        <div class="board fascist-board">
-          <div class="board-label">Fascist</div>
-          <div class="board-track" id="fascist-track"></div>
-        </div>
-      </div>
-
-      <div class="players-ring" id="players-ring"></div>
-
-      <div class="center-stage" id="center-stage"></div>
-
-      <div class="deck-info">
-        <div class="deck-pile">
-          <div class="pile-label">Draw</div>
-          <div class="pile-count" id="draw-count">17</div>
-        </div>
-        <div class="election-tracker">
-          <div class="tracker-label">Election Tracker</div>
-          <div class="tracker-dots" id="tracker-dots">
-            <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+      <div class="game-content">
+        <div class="boards">
+          <div class="board liberal-board">
+            <div class="board-label">Liberal</div>
+            <div class="board-track" id="liberal-track"></div>
+          </div>
+          <div class="board fascist-board">
+            <div class="board-label">Fascist</div>
+            <div class="board-track" id="fascist-track"></div>
+          </div>
+          <div class="board tracker-board" id="tracker-board" data-tooltip="3 failed elections in a row trigger chaos: top policy auto-enacts and term limits reset.">
+            <div class="board-label">Failed<br>Votes</div>
+            <div class="board-track tracker-track" id="tracker-track">
+              <div class="tracker-cell"></div>
+              <div class="tracker-cell"></div>
+              <div class="tracker-cell"></div>
+            </div>
+            <div class="tracker-count" id="tracker-count">0 / 3</div>
           </div>
         </div>
-        <div class="deck-pile">
-          <div class="pile-label">Discard</div>
-          <div class="pile-count" id="discard-count">0</div>
-        </div>
+
+        <div class="players-ring" id="players-ring"></div>
+
+        <div class="center-stage" id="center-stage"></div>
       </div>
+
+      <aside class="game-side">
+        <div class="deck-info">
+          <div class="deck-pile" id="draw-pile">
+            <div class="card-stack" data-kind="draw">
+              <div class="card-back card-back-faded"></div>
+              <div class="card-back card-back-faded"></div>
+              <div class="card-back">
+                <span class="card-count" id="draw-count">17</span>
+              </div>
+            </div>
+            <div class="pile-label">Draw Pile</div>
+          </div>
+
+          <div class="deck-pile" id="discard-pile">
+            <div class="card-stack" data-kind="discard">
+              <div class="card-back card-back-faded"></div>
+              <div class="card-back card-back-faded"></div>
+              <div class="card-back">
+                <span class="card-count" id="discard-count">0</span>
+              </div>
+            </div>
+            <div class="pile-label">Discard</div>
+          </div>
+        </div>
+
+        <div class="side-history">
+          <h3>History</h3>
+          <div class="side-history-list" id="side-history-list">
+            <div class="se-empty">No events yet</div>
+          </div>
+        </div>
+      </aside>
     </main>
   </section>
 

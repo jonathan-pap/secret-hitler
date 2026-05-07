@@ -10,9 +10,12 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { WebSocketServer } = require('ws');
+const { pickBotName, decideBotAction } = require('./bots');
 
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, 'public');
+const BOT_TICK_MS = 1100;     // delay between bot actions (feels human)
+const BOT_TICK_JITTER = 600;  // random extra delay
 
 // ==========================================================
 // GAME RULES TABLES
@@ -100,6 +103,7 @@ function freshGameState() {
     voteRevealed: false,
     round: 1,
     log: [],
+    history: [],          // structured per-round event timeline
     pendingVeto: null,
     lastInvestigation: null,  // { byToken, targetIdx, party }
     lastPeek: null,           // { byToken, cards }
@@ -123,15 +127,69 @@ function send(ws, type, payload = {}) {
 
 function broadcastRoom(room) {
   for (const p of room.players) {
+    if (p.isBot) continue;
     const ws = room.sockets.get(p.token);
     if (!ws) continue;
     send(ws, 'state', { state: viewFor(room, p.token) });
+  }
+  scheduleBotTick(room);
+}
+
+// ==========================================================
+// BOT SCHEDULER
+// ==========================================================
+function scheduleBotTick(room) {
+  if (!room.players.some(p => p.isBot)) return;
+  if (room.phase === 'lobby' || room.phase === 'roleReveal' || room.phase === 'end') return;
+  if (room._botTimer) return; // already scheduled
+  const delay = BOT_TICK_MS + Math.floor(Math.random() * BOT_TICK_JITTER);
+  room._botTimer = setTimeout(() => {
+    room._botTimer = null;
+    runBotTick(room);
+  }, delay);
+}
+
+function runBotTick(room) {
+  if (!room.state) return;
+  // Pick the first bot that has something to do.
+  // Order: in voting phase, randomize so bots don't always vote in same order.
+  const order = [...room.players];
+  if (room.phase === 'voting') {
+    for (let i = order.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+  }
+  for (const bot of order) {
+    if (!bot.isBot) continue;
+    if (!bot.alive && room.phase !== 'end') continue;
+    const action = decideBotAction(room, bot);
+    if (!action) continue;
+    applyBotAction(room, bot, action);
+    return; // broadcastRoom inside the apply will reschedule
+  }
+}
+
+function applyBotAction(room, bot, action) {
+  switch (action.type) {
+    case 'advance':       return handleAdvance(room, bot.token);
+    case 'vote':          return handleVote(room, bot.token, action.vote);
+    case 'nominate':      return handleNominate(room, bot.token, action.targetIdx);
+    case 'discard':       return handleDiscard(room, bot.token, action.idx);
+    case 'enact':         return handleEnact(room, bot.token, action.idx);
+    case 'vetoDecision':  return handleVetoDecision(room, bot.token, !!action.accept);
+    case 'choosePower':   return handleChoosePower(room, bot.token, action.targetIdx);
   }
 }
 
 function logEvent(room, text, cls = '') {
   room.state.log.push({ text, cls, round: room.state.round, ts: Date.now() });
   if (room.state.log.length > 200) room.state.log.shift();
+}
+
+function pushHistory(room, entry) {
+  room.state.history.push({ round: room.state.round, ts: Date.now(), ...entry });
+  if (room.state.history.length > 100) room.state.history.shift();
 }
 
 // ==========================================================
@@ -156,8 +214,10 @@ function viewFor(room, token) {
       name: p.name,
       alive: p.alive,
       investigated: p.investigated,
+      confirmedNotHitler: !!p.confirmedNotHitler,
       connected: p.connected,
       isHost: p.token === room.hostToken,
+      isBot: !!p.isBot,
       role: showRole ? p.role : null,
     };
   });
@@ -179,6 +239,9 @@ function viewFor(room, token) {
       ...baseView,
       winner: room.state ? room.state.winner : null,
       winReason: room.state ? room.state.winReason : '',
+      history: room.state ? room.state.history.slice(-50) : [],
+      log: room.state ? room.state.log.slice(-60) : [],
+      round: room.state ? room.state.round : 0,
     };
   }
 
@@ -198,6 +261,7 @@ function viewFor(room, token) {
     deckCount: s.deck.length,
     discardCount: s.discard.length,
     log: s.log.slice(-60),
+    history: s.history.slice(-50),
     enactedPolicy: s.enactedPolicy,
     enactedChaos: s.enactedChaos,
     pendingVeto: s.pendingVeto,
@@ -242,7 +306,6 @@ function viewFor(room, token) {
     ? room.players.find(p => p.token === s.ackForToken)?.idx ?? null
     : null;
   view.ackForMe = s.ackForToken === token;
-
   return view;
 }
 
@@ -387,9 +450,18 @@ function handleAdvance(room, token) {
     const passed = ja > nein;
     if (passed) {
       logEvent(room, `Government elected: ${room.players[s.presidentIdx].name} & ${room.players[s.chancellorIdx].name} (${ja}-${nein}).`);
-      // Hitler-as-Chancellor instant win
-      if (s.fascistPolicies >= 3 && room.players[s.chancellorIdx].role === 'hitler') {
-        return endGame(room, 'fascist', 'Hitler was elected Chancellor with 3+ fascist policies.');
+      // Hitler-as-Chancellor instant win — checked at 3+ fascist policies
+      if (s.fascistPolicies >= 3) {
+        const chan = room.players[s.chancellorIdx];
+        if (chan.role === 'hitler') {
+          return endGame(room, 'fascist', 'Hitler was elected Chancellor with 3+ fascist policies.');
+        }
+        // Per official rules: "Otherwise, other players know for sure the Chancellor is not Hitler."
+        if (!chan.confirmedNotHitler) {
+          chan.confirmedNotHitler = true;
+          logEvent(room, `${chan.name} confirmed: NOT Hitler.`);
+          pushHistory(room, { kind: 'notHitler', chanIdx: s.chancellorIdx });
+        }
       }
       s.electionTracker = 0;
       // Move to legislative session: president picks
@@ -400,6 +472,12 @@ function handleAdvance(room, token) {
       broadcastRoom(room);
     } else {
       logEvent(room, `Election failed (${ja}-${nein}). Tracker ${s.electionTracker + 1}/3.`);
+      pushHistory(room, {
+        kind: 'failedElection',
+        presIdx: s.presidentIdx,
+        chanIdx: s.chancellorIdx,
+        ja, nein,
+      });
       s.electionTracker++;
       if (s.electionTracker >= 3) {
         room.phase = 'chaos';
@@ -428,6 +506,7 @@ function handleAdvance(room, token) {
       s.fascistPolicies++;
       logEvent(room, 'Chaos: fascist policy enacted.', 'policy-fasc');
     }
+    pushHistory(room, { kind: 'chaos', policy });
     s.electionTracker = 0;
     s.prevPresident = null;
     s.prevChancellor = null;
@@ -461,6 +540,7 @@ function handleAdvance(room, token) {
       if (power === 'peek') {
         ensureDeck(room, 3);
         s.lastPeek = { byToken: room.players[s.presidentIdx].token, cards: s.deck.slice(0, 3) };
+        pushHistory(room, { kind: 'power', power: 'peek', byIdx: s.presidentIdx });
         room.phase = 'power-peek';
         s.ackForToken = room.players[s.presidentIdx].token;
         broadcastRoom(room);
@@ -540,6 +620,16 @@ function handleEnact(room, token, idx) {
     s.fascistPolicies++;
     logEvent(room, `${me.name} enacted a fascist policy.`, 'policy-fasc');
   }
+  // Record the structured event with vote tally
+  const ja = Object.values(s.votes).filter(v => v === 'ja').length;
+  const nein = Object.values(s.votes).filter(v => v === 'nein').length;
+  pushHistory(room, {
+    kind: 'enactment',
+    presIdx: s.presidentIdx,
+    chanIdx: s.chancellorIdx,
+    policy: enacted,
+    ja, nein,
+  });
   s.enactedPolicy = enacted;
   s.enactedChaos = false;
   room.phase = 'policyEnacted';
@@ -570,6 +660,11 @@ function handleVetoDecision(room, token, accept) {
     s.handChancellor = [];
     s.pendingVeto = null;
     logEvent(room, `Veto accepted. Both policies discarded.`);
+    pushHistory(room, {
+      kind: 'veto',
+      presIdx: s.presidentIdx,
+      chanIdx: s.chancellorIdx,
+    });
     s.electionTracker++;
     if (s.electionTracker >= 3) {
       room.phase = 'chaos';
@@ -605,6 +700,7 @@ function handleChoosePower(room, token, targetIdx) {
     const party = target.role === 'liberal' ? 'liberal' : 'fascist';
     s.lastInvestigation = { byToken: me.token, targetIdx, party };
     logEvent(room, `${me.name} investigated ${target.name}.`);
+    pushHistory(room, { kind: 'power', power: 'investigate', byIdx: me.idx, targetIdx });
     room.phase = 'investigationReveal';
     s.ackForToken = me.token;
     broadcastRoom(room);
@@ -617,6 +713,7 @@ function handleChoosePower(room, token, targetIdx) {
     s.pendingPower = null;
     s.pendingPowerForToken = null;
     logEvent(room, `${me.name} called special election: ${target.name} becomes President.`);
+    pushHistory(room, { kind: 'power', power: 'specialElection', byIdx: me.idx, targetIdx });
     s.round++;
     beginNomination(room);
     return;
@@ -625,6 +722,7 @@ function handleChoosePower(room, token, targetIdx) {
   if (room.phase === 'power-execution') {
     target.alive = false;
     logEvent(room, `${me.name} executed ${target.name}.`, 'death');
+    pushHistory(room, { kind: 'power', power: 'execution', byIdx: me.idx, targetIdx });
     if (target.role === 'hitler') {
       return endGame(room, 'liberal', `Hitler (${target.name}) was executed.`);
     }
@@ -664,6 +762,8 @@ function handleMessage(ws, raw) {
     case 'leave':  return onLeave(ws);
     case 'start':  return onStart(ws);
     case 'restart': return onRestart(ws);
+    case 'addBot':    return onAddBot(ws);
+    case 'removeBot': return onRemoveBot(ws);
     case 'action': return onAction(ws, msg);
   }
 }
@@ -673,7 +773,7 @@ function onCreate(ws, msg) {
   if (!name) return send(ws, 'error', { message: 'Name required.' });
   const token = uid();
   const room = makeRoom(token);
-  const player = { token, name, role: null, alive: true, investigated: false, connected: true, idx: 0 };
+  const player = { token, name, role: null, alive: true, investigated: false, connected: true, idx: 0, isBot: false };
   room.players.push(player);
   room.sockets.set(token, ws);
   ws._roomCode = room.code;
@@ -694,12 +794,45 @@ function onJoin(ws, msg) {
     return send(ws, 'error', { message: 'Name already taken in this room.' });
 
   const token = uid();
-  const player = { token, name, role: null, alive: true, investigated: false, connected: true, idx: room.players.length };
+  const player = { token, name, role: null, alive: true, investigated: false, connected: true, idx: room.players.length, isBot: false };
   room.players.push(player);
   room.sockets.set(token, ws);
   ws._roomCode = room.code;
   ws._token = token;
   send(ws, 'joined', { code: room.code, token, youName: name });
+  broadcastRoom(room);
+}
+
+function onAddBot(ws) {
+  const room = rooms.get(ws._roomCode);
+  if (!room) return;
+  if (ws._token !== room.hostToken) return send(ws, 'error', { message: 'Only the host can add bots.' });
+  if (room.phase !== 'lobby') return send(ws, 'error', { message: 'Bots can only be added in the lobby.' });
+  if (room.players.length >= 10) return send(ws, 'error', { message: 'Room is full (max 10).' });
+  const taken = new Set(room.players.map(p => p.name.toLowerCase()));
+  const name = pickBotName(taken);
+  const token = uid();
+  const player = {
+    token, name, role: null, alive: true, investigated: false,
+    connected: true, idx: room.players.length, isBot: true,
+  };
+  room.players.push(player);
+  broadcastRoom(room);
+}
+
+function onRemoveBot(ws) {
+  const room = rooms.get(ws._roomCode);
+  if (!room) return;
+  if (ws._token !== room.hostToken) return send(ws, 'error', { message: 'Only the host can remove bots.' });
+  if (room.phase !== 'lobby') return send(ws, 'error', { message: 'Bots can only be removed in the lobby.' });
+  // Remove the most recently added bot
+  for (let i = room.players.length - 1; i >= 0; i--) {
+    if (room.players[i].isBot) {
+      room.players.splice(i, 1);
+      break;
+    }
+  }
+  room.players.forEach((p, i) => p.idx = i);
   broadcastRoom(room);
 }
 

@@ -9,6 +9,20 @@ const POWER_NAMES = {
   specialElection: 'Special Election',
   execution: 'Execution',
 };
+const POWER_DESC = {
+  investigate: 'See a player\'s party affiliation (not Hitler vs Fascist).',
+  peek: 'Secretly view the next 3 policies in the deck.',
+  specialElection: 'Choose any player to be the next President.',
+  execution: 'Execute a player. They cannot speak or vote.',
+};
+// Crisp inline SVG icons for each power slot
+const POWER_ICONS = {
+  investigate: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6"/><path d="m20 20-3.5-3.5"/></svg>',
+  peek: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+  specialElection: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11h18v9H3z"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/><path d="m9 15 2 2 4-4"/></svg>',
+  execution: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a8 8 0 0 0-8 8v5l2 2v3h3v-2h2v2h2v-2h2v2h3v-3l2-2v-5a8 8 0 0 0-8-8z"/><circle cx="9" cy="11" r="1.2" fill="currentColor"/><circle cx="15" cy="11" r="1.2" fill="currentColor"/><path d="M10 16h4"/></svg>',
+  win: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h12l-1 6a5 5 0 0 1-10 0z"/><path d="M6 4H4v3a3 3 0 0 0 3 3"/><path d="M18 4h2v3a3 3 0 0 1-3 3"/><path d="M9 18h6"/><path d="M12 14v4"/></svg>',
+};
 
 // ---------- DOM helpers ----------
 const $ = (id) => document.getElementById(id);
@@ -142,11 +156,13 @@ function renderLobby(view) {
     const cls = ['lobby-player'];
     if (p.token === view.youToken) cls.push('me');
     if (!p.connected) cls.push('disconnected');
+    if (p.isBot) cls.push('bot');
     const initial = p.name.charAt(0).toUpperCase();
     const tags = [];
     if (p.isHost) tags.push(['host', 'HOST']);
     if (p.token === view.youToken) tags.push(['you', 'YOU']);
-    if (!p.connected) tags.push(['off', 'OFFLINE']);
+    if (p.isBot) tags.push(['bot', 'AI']);
+    if (!p.connected && !p.isBot) tags.push(['off', 'OFFLINE']);
     list.appendChild(el('div', { class: cls.join(' ') },
       el('div', { class: 'lp-avatar' }, initial),
       el('div', { class: 'lp-name' }, p.name),
@@ -174,20 +190,28 @@ function renderLobby(view) {
   // Start button (host only, 5+ players)
   const startBtn = $('btn-start');
   const need = $('lobby-need');
+  const botCtl = $('bot-controls');
   if (view.isHost) {
     startBtn.classList.remove('hidden');
+    botCtl.classList.remove('hidden');
     if (view.players.length >= 5 && view.players.length <= 10) {
       startBtn.disabled = false;
       need.textContent = `Ready to begin with ${view.players.length} players.`;
     } else if (view.players.length < 5) {
       startBtn.disabled = true;
-      need.textContent = `Need ${5 - view.players.length} more player${5 - view.players.length === 1 ? '' : 's'}…`;
+      need.textContent = `Need ${5 - view.players.length} more — invite friends or add AI players for testing.`;
     } else {
       startBtn.disabled = true;
       need.textContent = `Maximum 10 players.`;
     }
+    // Wire bot buttons each render
+    const botCount = view.players.filter(p => p.isBot).length;
+    $('btn-add-bot').disabled = view.players.length >= 10;
+    $('btn-remove-bot').disabled = botCount === 0;
+    $('btn-fill-bots').disabled = view.players.length >= 5;
   } else {
     startBtn.classList.add('hidden');
+    botCtl.classList.add('hidden');
     need.textContent = `Waiting for ${view.players.find(p => p.isHost)?.name || 'host'} to start the game…`;
   }
 }
@@ -272,56 +296,175 @@ function renderGame(view) {
     mini.appendChild(el('div', { class: 'mini-cell' + (i < (view.fascistPolicies || 0) ? ' fascist' : '') }));
   }
 
-  // Liberal board
+  // Liberal board — only the 5th cell unlocks "win"
   const libTrack = $('liberal-track');
   libTrack.innerHTML = '';
   for (let i = 0; i < 5; i++) {
     const filled = i < view.liberalPolicies;
     const isWin = i === 4;
-    libTrack.appendChild(el('div', { class: 'policy-cell' + (filled ? ' filled liberal' : '') },
-      el('span', { class: 'cell-num' }, String(i + 1)),
-      isWin ? el('span', { class: 'power-icon' }, '🏆') : null,
-    ));
+    const cls = 'policy-cell' + (filled ? ' filled liberal' : '');
+    const attrs = { class: cls };
+    if (isWin) {
+      attrs['data-power'] = 'win';
+      attrs['data-tooltip'] = '5 Liberal Policies — Liberal Victory';
+      attrs.title = 'Liberal Victory';
+    }
+    const cell = el('div', attrs, el('span', { class: 'cell-num' }, String(i + 1)));
+    if (isWin) {
+      const icon = el('span', { class: 'power-icon win-icon liberal-win' });
+      icon.innerHTML = POWER_ICONS.win;
+      cell.appendChild(icon);
+    }
+    libTrack.appendChild(cell);
   }
 
-  // Fascist board
+  // Fascist board — most cells trigger an executive power
   const fasTrack = $('fascist-track');
   fasTrack.innerHTML = '';
   const powers = view.fascistPowers || [];
   for (let i = 0; i < 6; i++) {
     const filled = i < view.fascistPolicies;
+    const isWin = i === 5;
     const power = powers[i];
-    const icon = i === 5 ? '🏆' : (
-      power === 'investigate' ? '🔍' :
-      power === 'peek' ? '👁️' :
-      power === 'specialElection' ? '🗳️' :
-      power === 'execution' ? '☠️' : ''
-    );
-    fasTrack.appendChild(el('div', { class: 'policy-cell' + (filled ? ' filled fascist' : '') },
-      el('span', { class: 'cell-num' }, String(i + 1)),
-      icon ? el('span', { class: 'power-icon' }, icon) : null,
-    ));
+    const cls = 'policy-cell' + (filled ? ' filled fascist' : '');
+    const attrs = { class: cls };
+    let svg = null, label = '';
+    if (isWin) {
+      svg = POWER_ICONS.win;
+      label = '6 Fascist Policies — Fascist Victory';
+      attrs['data-power'] = 'win';
+      attrs['data-tooltip'] = label;
+      attrs.title = 'Fascist Victory';
+    } else if (power) {
+      svg = POWER_ICONS[power];
+      label = `${POWER_NAMES[power]} — ${POWER_DESC[power]}`;
+      attrs['data-power'] = power;
+      attrs['data-tooltip'] = label;
+      attrs.title = POWER_NAMES[power];
+    }
+    const cell = el('div', attrs, el('span', { class: 'cell-num' }, String(i + 1)));
+    if (svg) {
+      const iconCls = 'power-icon' + (isWin ? ' win-icon fascist-win' : '');
+      const icon = el('span', { class: iconCls });
+      icon.innerHTML = svg;
+      cell.appendChild(icon);
+    }
+    fasTrack.appendChild(cell);
+  }
+
+  // Hitler-as-Chancellor warning indicator: red glow on fascist track at 3F
+  fasTrack.classList.toggle('threshold-active', (view.fascistPolicies || 0) >= 3);
+
+  // Failed-elections tracker (under the Liberal/Fascist boards)
+  const tracker = view.electionTracker || 0;
+  const trackCells = document.querySelectorAll('#tracker-track .tracker-cell');
+  trackCells.forEach((cell, i) => {
+    cell.classList.toggle('active', i < tracker);
+    // Pulse the next-up empty cell when at 2/3 (next failed = chaos)
+    cell.classList.toggle('warning', tracker === 2 && i === 2);
+  });
+  const tcount = $('tracker-count');
+  if (tcount) {
+    tcount.textContent = `${tracker} / 3`;
+    tcount.classList.toggle('warning', tracker >= 2);
   }
 
   // Players ring
   renderPlayersRing(view);
 
-  // Deck info
-  $('draw-count').textContent = view.deckCount ?? 17;
-  $('discard-count').textContent = view.discardCount ?? 0;
-  const dots = $('tracker-dots');
-  dots.innerHTML = '';
-  for (let i = 0; i < 3; i++) {
-    dots.appendChild(el('div', { class: 'dot' + (i < (view.electionTracker || 0) ? ' active' : '') }));
+  // Deck info — pulse the stack when count changes
+  const drawEl = $('draw-count');
+  const discardEl = $('discard-count');
+  const newDraw = String(view.deckCount ?? 17);
+  const newDisc = String(view.discardCount ?? 0);
+  if (drawEl.textContent !== newDraw) {
+    drawEl.textContent = newDraw;
+    const stack = drawEl.closest('.card-stack');
+    if (stack) { stack.classList.remove('pulse'); void stack.offsetWidth; stack.classList.add('pulse'); }
+  }
+  if (discardEl.textContent !== newDisc) {
+    discardEl.textContent = newDisc;
+    const stack = discardEl.closest('.card-stack');
+    if (stack) { stack.classList.remove('pulse'); void stack.offsetWidth; stack.classList.add('pulse'); }
   }
 
   // Center stage
   renderStage(view);
 
+  // Side history panel (desktop only — element exists but hidden on mobile)
+  renderSideHistory(view);
+
   // Header buttons
   $('btn-menu').onclick = () => showMenu(view);
   $('btn-log').onclick = () => showLog(view);
   $('btn-myrole').onclick = () => showMyRole(view);
+}
+
+let _lastHistoryLen = 0;
+function renderSideHistory(view) {
+  const list = $('side-history-list');
+  if (!list) return;
+  const history = view.history || [];
+  if (history.length === 0) {
+    list.innerHTML = '<div class="se-empty">No events yet</div>';
+    _lastHistoryLen = 0;
+    return;
+  }
+  const playerName = idx => view.players[idx]?.name ?? '?';
+  const trunc = s => s && s.length > 10 ? s.slice(0, 9) + '…' : (s || '');
+
+  // Newest first; mark the freshest entry with a brief gold ring
+  const isNew = idx => idx === 0 && history.length > _lastHistoryLen;
+  const reversed = history.slice().reverse();
+  list.innerHTML = reversed.map((e, i) =>
+    renderSideRow(e, playerName, trunc, isNew(i))
+  ).join('');
+  _lastHistoryLen = history.length;
+}
+
+function renderSideRow(e, playerName, trunc, fresh) {
+  const pres = e.presIdx != null ? `<span class="he-pres">${escapeHtml(trunc(playerName(e.presIdx)))}</span>` : '';
+  const chan = e.chanIdx != null ? `<span class="he-chan">${escapeHtml(trunc(playerName(e.chanIdx)))}</span>` : '';
+  const tgt  = e.targetIdx != null ? `<span class="he-target">${escapeHtml(trunc(playerName(e.targetIdx)))}</span>` : '';
+  const by   = e.byIdx != null ? `<span class="he-pres">${escapeHtml(trunc(playerName(e.byIdx)))}</span>` : '';
+  const freshCls = fresh ? ' fresh' : '';
+
+  const wrap = (cls, icon, line1, line2) =>
+    `<div class="se-row ${cls}${freshCls}">
+       <div class="se-round">R${e.round}</div>
+       <div class="se-icon">${icon}</div>
+       <div class="se-body">
+         <div class="se-line1">${line1}</div>
+         <div class="se-line2">${line2}</div>
+       </div>
+     </div>`;
+
+  switch (e.kind) {
+    case 'enactment':
+      return wrap(
+        `enactment-${e.policy}`,
+        e.policy === 'liberal' ? '🕊' : '🔥',
+        `${pres} → ${chan}`,
+        `${e.policy === 'liberal' ? 'Liberal' : 'Fascist'} · ${e.ja}–${e.nein}`
+      );
+    case 'failedElection':
+      return wrap('failed', '✕', `${pres} → ${chan}`, `Failed · ${e.ja}–${e.nein}`);
+    case 'chaos':
+      return wrap('chaos', '⚡',
+        `Chaos · ${e.policy === 'liberal' ? 'Liberal' : 'Fascist'}`,
+        '3 elections failed');
+    case 'veto':
+      return wrap('veto', '⊘', `${pres} & ${chan}`, 'Vetoed both');
+    case 'power':
+      if (e.power === 'investigate')     return wrap('power-investigate', '🔍', `${by} → ${tgt}`, 'Investigated');
+      if (e.power === 'peek')            return wrap('power-peek', '👁', `${by} peeked`, 'Saw next 3');
+      if (e.power === 'specialElection') return wrap('power-specialElection', '🗳', `${by} → ${tgt}`, 'Special Election');
+      if (e.power === 'execution')       return wrap('power-execution', '☠', `${by} → ${tgt}`, 'Executed');
+      return '';
+    case 'notHitler':
+      return wrap('notHitler', '✓', chan, 'NOT Hitler');
+  }
+  return '';
 }
 
 function renderPlayersRing(view) {
@@ -339,8 +482,10 @@ function renderPlayersRing(view) {
     if (p.idx === view.chancellorIdx) cls.push('chancellor');
     if (!p.alive) cls.push('dead');
     if (p.investigated) cls.push('investigated');
-    if (!p.connected) cls.push('disconnected');
+    if (!p.connected && !p.isBot) cls.push('disconnected');
     if (p.token === view.youToken) cls.push('you');
+    if (p.isBot) cls.push('bot');
+    if (p.confirmedNotHitler) cls.push('not-hitler');
     if (p.idx === view.prevPresident || p.idx === view.prevChancellor) cls.push('term-limited');
 
     // Fascist visibility tinting
@@ -734,16 +879,174 @@ function showMenu(view) {
 }
 
 function showLog(view) {
-  const html = `
+  const historyHtml = renderHistoryHtml(view);
+  const logHtml = `
     <div class="log-list">
-      ${(!view.log || view.log.length === 0) ? '<p style="color:var(--text-faint)">No events yet.</p>' :
+      ${(!view.log || view.log.length === 0) ? '<p class="history-empty">No events yet.</p>' :
         view.log.slice().reverse().map(e =>
-          `<div class="log-entry ${e.cls || ''}">${e.text}</div>`
+          `<div class="log-entry ${e.cls || ''}">${escapeHtml(e.text)}</div>`
         ).join('')
       }
     </div>
   `;
-  openModal('Game Log', html);
+  const html = `
+    <div class="modal-tabs">
+      <button class="modal-tab active" data-tab="history">Timeline</button>
+      <button class="modal-tab" data-tab="log">Raw Log</button>
+    </div>
+    <div id="tab-history">${historyHtml}</div>
+    <div id="tab-log" style="display:none">${logHtml}</div>
+  `;
+  openModal('Game History', html);
+  // Tab switching
+  document.querySelectorAll('.modal-tab').forEach(t => {
+    t.onclick = () => {
+      document.querySelectorAll('.modal-tab').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      const tab = t.dataset.tab;
+      $('tab-history').style.display = tab === 'history' ? '' : 'none';
+      $('tab-log').style.display     = tab === 'log'     ? '' : 'none';
+    };
+  });
+}
+
+function renderHistoryHtml(view) {
+  const history = view.history || [];
+  if (history.length === 0) return '<p class="history-empty">No rounds played yet.</p>';
+
+  // Group entries by round (preserve order within round)
+  const byRound = new Map();
+  for (const e of history) {
+    if (!byRound.has(e.round)) byRound.set(e.round, []);
+    byRound.get(e.round).push(e);
+  }
+
+  const rounds = Array.from(byRound.entries()).sort((a, b) => b[0] - a[0]); // newest first
+  const playerName = idx => view.players[idx]?.name ?? '?';
+
+  const blocks = rounds.map(([round, events]) => {
+    const eventHtml = events.map(e => renderHistoryEvent(e, playerName)).join('');
+    return `
+      <div class="history-round">
+        <div class="history-round-num">R${round}</div>
+        <div class="history-events">${eventHtml}</div>
+      </div>
+    `;
+  });
+  return `<div class="history-list">${blocks.join('')}</div>`;
+}
+
+function renderHistoryEvent(e, playerName) {
+  const pres = e.presIdx != null ? `<span class="he-pres">${escapeHtml(playerName(e.presIdx))}</span>` : '';
+  const chan = e.chanIdx != null ? `<span class="he-chan">${escapeHtml(playerName(e.chanIdx))}</span>` : '';
+
+  switch (e.kind) {
+    case 'enactment': {
+      const cls = `enactment-${e.policy}`;
+      const icon = e.policy === 'liberal' ? '🕊️' : '🔥';
+      const word = e.policy === 'liberal' ? 'Liberal' : 'Fascist';
+      return `
+        <div class="history-event ${cls}">
+          <div class="he-icon">${icon}</div>
+          <div class="he-body">
+            <div class="he-line1">${pres} → ${chan}</div>
+            <div class="he-line2">Enacted ${word} policy</div>
+          </div>
+          <div class="he-tally">${e.ja}–${e.nein}</div>
+        </div>
+      `;
+    }
+    case 'failedElection': {
+      return `
+        <div class="history-event failed">
+          <div class="he-icon">✕</div>
+          <div class="he-body">
+            <div class="he-line1">${pres} → ${chan}</div>
+            <div class="he-line2">Election failed</div>
+          </div>
+          <div class="he-tally">${e.ja}–${e.nein}</div>
+        </div>
+      `;
+    }
+    case 'chaos': {
+      const icon = e.policy === 'liberal' ? '🕊️' : '🔥';
+      const word = e.policy === 'liberal' ? 'Liberal' : 'Fascist';
+      return `
+        <div class="history-event chaos">
+          <div class="he-icon">⚡</div>
+          <div class="he-body">
+            <div class="he-line1">Chaos: ${word} policy enacted</div>
+            <div class="he-line2">3 elections failed — top card auto-played</div>
+          </div>
+        </div>
+      `;
+    }
+    case 'veto': {
+      return `
+        <div class="history-event veto">
+          <div class="he-icon">⊘</div>
+          <div class="he-body">
+            <div class="he-line1">${pres} & ${chan} vetoed both policies</div>
+            <div class="he-line2">Tracker advanced</div>
+          </div>
+        </div>
+      `;
+    }
+    case 'notHitler': {
+      const c = e.chanIdx != null ? `<span class="he-chan">${escapeHtml(playerName(e.chanIdx))}</span>` : '';
+      return `
+        <div class="history-event power-investigate">
+          <div class="he-icon">✓</div>
+          <div class="he-body">
+            <div class="he-line1">${c} confirmed: NOT Hitler</div>
+            <div class="he-line2">Elected Chancellor with 3+ Fascist policies</div>
+          </div>
+        </div>
+      `;
+    }
+    case 'power': {
+      const by = e.byIdx != null ? `<span class="he-pres">${escapeHtml(playerName(e.byIdx))}</span>` : '';
+      const target = e.targetIdx != null ? `<span class="he-target">${escapeHtml(playerName(e.targetIdx))}</span>` : '';
+      const cls = 'power-' + e.power;
+      if (e.power === 'investigate') return `
+        <div class="history-event ${cls}">
+          <div class="he-icon">🔍</div>
+          <div class="he-body">
+            <div class="he-line1">${by} investigated ${target}</div>
+            <div class="he-line2">Result private to investigator</div>
+          </div>
+        </div>`;
+      if (e.power === 'peek') return `
+        <div class="history-event ${cls}">
+          <div class="he-icon">👁️</div>
+          <div class="he-body">
+            <div class="he-line1">${by} peeked at the deck</div>
+            <div class="he-line2">Saw next 3 policies</div>
+          </div>
+        </div>`;
+      if (e.power === 'specialElection') return `
+        <div class="history-event ${cls}">
+          <div class="he-icon">🗳️</div>
+          <div class="he-body">
+            <div class="he-line1">${by} called special election: ${target}</div>
+            <div class="he-line2">Becomes next President</div>
+          </div>
+        </div>`;
+      if (e.power === 'execution') return `
+        <div class="history-event ${cls}">
+          <div class="he-icon">☠</div>
+          <div class="he-body">
+            <div class="he-line1">${by} executed ${target}</div>
+            <div class="he-line2">Player removed from the game</div>
+          </div>
+        </div>`;
+    }
+  }
+  return '';
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
 function showMyRole(view) {
@@ -860,6 +1163,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // Lobby
   $('btn-start').onclick = () => send('start');
   $('btn-leave').onclick = leaveRoom;
+  $('btn-add-bot').onclick = () => send('addBot');
+  $('btn-remove-bot').onclick = () => send('removeBot');
+  $('btn-fill-bots').onclick = () => {
+    const need = 5 - (lastView ? lastView.players.length : 0);
+    for (let i = 0; i < need; i++) send('addBot');
+  };
   $('btn-copy-code').onclick = () => {
     navigator.clipboard?.writeText(myCode).then(
       () => toast('Code copied!'),
