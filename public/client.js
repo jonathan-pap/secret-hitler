@@ -209,6 +209,8 @@ function renderLobby(view) {
     $('btn-add-bot').disabled = view.players.length >= 10;
     $('btn-remove-bot').disabled = botCount === 0;
     $('btn-fill-bots').disabled = view.players.length >= 5;
+    const maxBtn = $('btn-max-bots');
+    if (maxBtn) maxBtn.disabled = view.players.length >= 10;
   } else {
     startBtn.classList.add('hidden');
     botCtl.classList.add('hidden');
@@ -407,25 +409,50 @@ function renderGame(view) {
   wireBtn('btn-myrole-side', onRole);
 }
 
-let _lastHistoryLen = 0;
+let _lastHistoryLen = -1;
 function renderSideHistory(view) {
   const list = $('side-history-list');
   if (!list) return;
   const history = view.history || [];
+
+  // Empty state
   if (history.length === 0) {
-    list.innerHTML = '<div class="se-empty">No events yet</div>';
-    _lastHistoryLen = 0;
+    if (_lastHistoryLen !== 0) {
+      list.innerHTML = '<div class="se-empty">No events yet</div>';
+      _lastHistoryLen = 0;
+    }
     return;
   }
+
+  // Skip entirely if nothing was added since last render. History is
+  // append-only, so length comparison is sufficient. This prevents flicker
+  // on every vote-state broadcast.
+  if (history.length === _lastHistoryLen) return;
+
   const playerName = idx => view.players[idx]?.name ?? '?';
   const trunc = s => s && s.length > 10 ? s.slice(0, 9) + '…' : (s || '');
 
-  // Newest first; mark the freshest entry with a brief gold ring
-  const isNew = idx => idx === 0 && history.length > _lastHistoryLen;
-  const reversed = history.slice().reverse();
-  list.innerHTML = reversed.map((e, i) =>
-    renderSideRow(e, playerName, trunc, isNew(i))
-  ).join('');
+  // Initial render (first entries appearing): build the full list at once
+  if (_lastHistoryLen <= 0) {
+    list.innerHTML = history.slice().reverse()
+      .map(e => renderSideRow(e, playerName, trunc, false))
+      .join('');
+    const top = list.firstElementChild;
+    if (top && top.classList.contains('se-row')) top.classList.add('fresh');
+    _lastHistoryLen = history.length;
+    return;
+  }
+
+  // Incremental: prepend only the new events. Existing DOM nodes stay
+  // untouched (no re-flicker of older rows, scroll position preserved).
+  const newOnes = history.slice(_lastHistoryLen);
+  list.querySelectorAll('.se-row.fresh').forEach(el => el.classList.remove('fresh'));
+  for (const e of newOnes) {
+    list.insertAdjacentHTML('afterbegin', renderSideRow(e, playerName, trunc, false));
+  }
+  const top = list.firstElementChild;
+  if (top && top.classList.contains('se-row')) top.classList.add('fresh');
+
   _lastHistoryLen = history.length;
 }
 
@@ -495,8 +522,13 @@ function renderPlayersRing(view) {
     if (p.confirmedNotHitler) cls.push('not-hitler');
     if (p.idx === view.prevPresident || p.idx === view.prevChancellor) cls.push('term-limited');
 
-    // Fascist visibility tinting
+    // Role visibility tinting (only set if server sent the role to us)
     if (p.role === 'fascist') cls.push('fascist-known');
+    if (p.role === 'hitler')  cls.push('hitler-known');
+    // Danger flag when Hitler is the chancellor at the win-condition threshold
+    if (p.role === 'hitler' && p.idx === view.chancellorIdx && (view.fascistPolicies || 0) >= 3) {
+      cls.push('hitler-danger');
+    }
 
     // Voted indicator
     if (view.voteState && !view.voteState.revealed && view.voteState.hasVoted.includes(p.token) && p.alive) {
@@ -527,8 +559,8 @@ function renderPlayersRing(view) {
     let tagCls = '';
     if (p.idx === view.presidentIdx) { tag = 'PRESIDENT'; }
     else if (p.idx === view.chancellorIdx) { tag = 'CHANCELLOR'; tagCls = 'chancellor'; }
+    else if (p.role === 'hitler')  { tag = 'HITLER'; tagCls = 'hitler-known'; }
     else if (p.role === 'fascist') { tag = 'FASCIST'; tagCls = 'fascist-known'; }
-    else if (p.role === 'hitler')  { tag = 'HITLER'; }
 
     const pill = el('div', { class: cls.join(' '), 'data-id': p.idx },
       el('div', { class: 'player-avatar' }, initial),
@@ -1173,6 +1205,10 @@ document.addEventListener('DOMContentLoaded', () => {
   $('btn-remove-bot').onclick = () => send('removeBot');
   $('btn-fill-bots').onclick = () => {
     const need = 5 - (lastView ? lastView.players.length : 0);
+    for (let i = 0; i < need; i++) send('addBot');
+  };
+  $('btn-max-bots').onclick = () => {
+    const need = 10 - (lastView ? lastView.players.length : 0);
     for (let i = 0; i < need; i++) send('addBot');
   };
   $('btn-copy-code').onclick = () => {

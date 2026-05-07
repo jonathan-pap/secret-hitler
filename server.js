@@ -317,6 +317,8 @@ function viewFor(room, token) {
       history: room.state ? room.state.history.slice(-50) : [],
       log: room.state ? room.state.log.slice(-60) : [],
       round: room.state ? room.state.round : 0,
+      liberalPolicies: room.state ? room.state.liberalPolicies : 0,
+      fascistPolicies: room.state ? room.state.fascistPolicies : 0,
     };
   }
 

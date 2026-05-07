@@ -91,38 +91,47 @@
         </button>
       </div>
 
-      <div class="lobby-section">
-        <div class="lobby-section-header">
-          <h3>Players</h3>
-          <span id="lobby-count" class="count-badge">1</span>
+      <div class="lobby-body">
+        <div class="lobby-main">
+          <div class="lobby-section">
+            <div class="lobby-section-header">
+              <h3>Players</h3>
+              <span id="lobby-count" class="count-badge">1</span>
+            </div>
+            <div id="lobby-players" class="lobby-players"></div>
+            <p id="lobby-need" class="lobby-need">Waiting for at least 5 players…</p>
+          </div>
         </div>
-        <div id="lobby-players" class="lobby-players"></div>
-        <p id="lobby-need" class="lobby-need">Waiting for at least 5 players…</p>
-      </div>
 
-      <div class="lobby-section">
-        <h3>Roles</h3>
-        <div class="role-summary" id="lobby-roles">
-          <div class="lib"><strong>—</strong>Liberals</div>
-          <div class="fasc"><strong>—</strong>Fascists</div>
-          <div class="hit"><strong>1</strong>Hitler</div>
-        </div>
-      </div>
+        <div class="lobby-aside">
+          <div class="lobby-section">
+            <h3>Roles</h3>
+            <div class="role-summary" id="lobby-roles">
+              <div class="lib"><strong>—</strong>Liberals</div>
+              <div class="fasc"><strong>—</strong>Fascists</div>
+              <div class="hit"><strong>1</strong>Hitler</div>
+            </div>
+          </div>
 
-      <div class="lobby-actions">
-        <button id="btn-start" class="primary-btn" disabled>Begin Game</button>
-        <div id="bot-controls" class="bot-controls hidden">
-          <button id="btn-add-bot" class="ghost-btn">
-            <span class="ghost-icon">+</span> Add AI Player
-          </button>
-          <button id="btn-remove-bot" class="ghost-btn ghost-btn-sm" title="Remove last AI">
-            <span class="ghost-icon">−</span>
-          </button>
-          <button id="btn-fill-bots" class="ghost-btn ghost-btn-sm" title="Fill to 5 players">
-            Fill 5
-          </button>
+          <div class="lobby-actions">
+            <button id="btn-start" class="primary-btn" disabled>Begin Game</button>
+            <div id="bot-controls" class="bot-controls hidden">
+              <button id="btn-add-bot" class="ghost-btn">
+                <span class="ghost-icon">+</span> Add AI
+              </button>
+              <button id="btn-remove-bot" class="ghost-btn ghost-btn-sm" title="Remove last AI">
+                <span class="ghost-icon">−</span>
+              </button>
+              <button id="btn-fill-bots" class="ghost-btn ghost-btn-sm" title="Fill to 5 (minimum to start)">
+                Min&nbsp;5
+              </button>
+              <button id="btn-max-bots" class="ghost-btn ghost-btn-sm" title="Fill to 10 (maximum players)">
+                Max&nbsp;10
+              </button>
+            </div>
+            <button id="btn-leave" class="secondary-btn">Leave Room</button>
+          </div>
         </div>
-        <button id="btn-leave" class="secondary-btn">Leave Room</button>
       </div>
     </div>
   </section>
@@ -172,18 +181,14 @@
     </header>
 
     <main class="game-main">
-      <div class="game-content">
+      <section class="game-boards">
         <div class="boards">
           <div class="board liberal-board">
             <div class="board-label">Liberal</div>
             <div class="board-track" id="liberal-track"></div>
           </div>
-          <div class="board fascist-board">
-            <div class="board-label">Fascist</div>
-            <div class="board-track" id="fascist-track"></div>
-          </div>
           <div class="board tracker-board" id="tracker-board" data-tooltip="3 failed elections in a row trigger chaos: top policy auto-enacts and term limits reset.">
-            <div class="board-label">Failed<br>Votes</div>
+            <div class="tracker-inline-label">Election Tracker</div>
             <div class="board-track tracker-track" id="tracker-track">
               <div class="tracker-cell"></div>
               <div class="tracker-cell"></div>
@@ -191,12 +196,20 @@
             </div>
             <div class="tracker-count" id="tracker-count">0 / 3</div>
           </div>
+          <div class="board fascist-board">
+            <div class="board-label">Fascist</div>
+            <div class="board-track" id="fascist-track"></div>
+          </div>
         </div>
+      </section>
 
+      <aside class="game-left">
         <div class="players-ring" id="players-ring"></div>
+      </aside>
 
+      <section class="game-stage">
         <div class="center-stage" id="center-stage"></div>
-      </div>
+      </section>
 
       <aside class="game-side">
         <div class="side-actions">

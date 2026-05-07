@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!--
+    Peace dove emblem — classic flying-dove silhouette with raised wing.
+    Body horizontal, head left, wing raised upward (the iconic peace-dove
+    pose), olive branch in beak. Layered shapes for clarity at small sizes.
+  -->
+
+  <!-- Outer medallion -->
+  <circle cx="100" cy="100" r="86" fill="none" stroke="#ffffff" stroke-width="2.5" opacity="0.5"/>
+  <circle cx="100" cy="100" r="78" fill="none" stroke="#ffffff" stroke-width="0.8" opacity="0.25"/>
+
+  <!-- Tail feathers (small, behind body on the right) -->
+  <g fill="#ffffff" stroke="#5a728c" stroke-width="1.6" stroke-linejoin="round">
+    <path d="M 154 108 L 184 108 L 180 118 L 154 118 Z"/>
+    <path d="M 154 118 L 180 126 L 172 134 L 154 126 Z"/>
+  </g>
+
+  <!-- Body — horizontal teardrop, head extending left -->
+  <path d="
+    M 35 115
+    C 30 105, 38 95, 55 92
+    L 70 90
+    C 80 84, 95 82, 115 82
+    C 138 82, 158 88, 168 96
+    C 174 102, 170 112, 162 116
+    C 145 124, 122 128, 95 128
+    L 88 142
+    L 82 146
+    L 81 132
+    C 65 132, 50 128, 40 122
+    C 32 118, 33 114, 35 115 Z
+  " fill="#ffffff" stroke="#5a728c" stroke-width="2.2" stroke-linejoin="round"/>
+
+  <!-- Wing — raised UP from body (the iconic peace dove pose) -->
+  <path d="
+    M 78 95
+    C 72 80, 68 60, 60 42
+    C 78 50, 95 64, 110 80
+    C 118 88, 122 95, 120 100
+    C 108 102, 92 100, 78 95 Z
+  " fill="#dde6ee" stroke="#5a728c" stroke-width="1.8" stroke-linejoin="round"/>
+
+  <!-- Wing feather lines -->
+  <g stroke="#7b9bb8" stroke-width="1.1" fill="none" opacity="0.85" stroke-linecap="round">
+    <path d="M 82 90 L 110 92"/>
+    <path d="M 78 78 L 102 82"/>
+    <path d="M 74 66 L 92 70"/>
+    <path d="M 70 54 L 82 58"/>
+  </g>
+
+  <!-- Eye -->
+  <circle cx="42" cy="106" r="2.6" fill="#1a3050"/>
+  <circle cx="43" cy="105" r="0.9" fill="#ffffff"/>
+
+  <!-- Beak — gold, pointing LEFT -->
+  <path d="M 32 106 L 16 103 L 26 116 Z" fill="#ffcb47" stroke="#a07020" stroke-width="1"/>
+
+  <!-- Olive branch — stem with leaves, hanging from beak -->
+  <g>
+    <path d="M 16 103 Q 6 107 -2 108" stroke="#54793a" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    <ellipse cx="10" cy="96" rx="6.5" ry="3" transform="rotate(25 10 96)" fill="#a8d99c" stroke="#54793a" stroke-width="1"/>
+    <ellipse cx="2" cy="103" rx="6.5" ry="3" transform="rotate(-15 2 103)" fill="#88c478" stroke="#54793a" stroke-width="1"/>
+    <ellipse cx="10" cy="111" rx="5" ry="2.5" transform="rotate(45 10 111)" fill="#a8d99c" stroke="#54793a" stroke-width="1"/>
+    <ellipse cx="16" cy="93" rx="3" ry="1.5" transform="rotate(60 16 93)" fill="#88c478" stroke="#54793a" stroke-width="0.8"/>
+  </g>
+</svg>

@@ -339,6 +339,60 @@ input { font-family: inherit; font-size: inherit; color: inherit; background: no
   gap: 20px;
   z-index: 1;
 }
+/* Mobile flow: body just stacks its children */
+.lobby-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.lobby-main, .lobby-aside {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Desktop: wider lobby with players on left, info+actions on right */
+@media (min-width: 768px) {
+  .lobby-wrap {
+    max-width: 880px;
+  }
+  .lobby-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 280px;
+    gap: 16px;
+    align-items: start;
+  }
+  /* Player list: 2-col grid, compact rows.
+     Selectors are scoped to `.lobby-body` to win the specificity battle
+     against the base single-column rule defined later in the file. */
+  .lobby-body .lobby-players {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .lobby-body .lobby-player {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+  .lobby-body .lobby-player .lp-avatar {
+    width: 30px;
+    height: 30px;
+    font-size: 12px;
+    border-width: 1.5px;
+  }
+  .lobby-body .lobby-player .lp-name {
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+  .lobby-body .lobby-player .lp-tag {
+    font-size: 9px;
+    padding: 2px 5px;
+    letter-spacing: 1px;
+  }
+}
 
 .lobby-header {
   display: flex;
@@ -527,21 +581,32 @@ input { font-family: inherit; font-size: inherit; color: inherit; background: no
 .ghost-btn-sm { flex: 0 0 auto; padding: 10px 12px; }
 .ghost-icon { font-size: 16px; line-height: 1; font-weight: 700; }
 
-/* Bot indicator on player pills in the game */
+/* Bot indicator — inside pill, top-right corner. AI and YOU never coexist
+   on the same pill (host human can't be a bot), so they share corner space
+   without conflict. Has-voted ✓ also lives top-right but only during voting,
+   when AI badges sit slightly differently — see scope below. */
 .player-pill.bot::before {
   content: 'AI';
   position: absolute;
-  bottom: -7px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 8px;
+  top: 5px;
+  right: 5px;
+  font-size: 9px;
   font-weight: 700;
-  letter-spacing: 1.5px;
+  letter-spacing: 1px;
   background: var(--liberal);
   color: #061a2c;
-  padding: 1px 6px;
-  border-radius: 4px;
-  z-index: 1;
+  padding: 2px 5px;
+  border-radius: 3px;
+  z-index: 2;
+  line-height: 1;
+}
+/* When a bot has voted, push the ✓ into the bottom-right so it doesn't
+   collide with the AI tag in the top-right. */
+.player-pill.bot.has-voted::after {
+  top: auto;
+  bottom: 4px;
+  right: 5px;
+  font-size: 13px;
 }
 
 .lobby-need {
@@ -772,6 +837,8 @@ input { font-family: inherit; font-size: inherit; color: inherit; background: no
   gap: 16px;
   overflow-y: auto;
 }
+/* Mobile flow defaults: each section just stacks vertically.
+   Order is preserved by document order: boards → players → stage → side. */
 .game-content {
   display: flex;
   flex-direction: column;
@@ -779,27 +846,68 @@ input { font-family: inherit; font-size: inherit; color: inherit; background: no
   min-width: 0;
   flex: 1;
 }
+.game-boards, .game-left, .game-stage { min-width: 0; }
 
 /* === Boards === */
-.boards { display: flex; flex-direction: column; gap: 8px; }
-.board {
+/* Continuous board: one container, vertical blue→red gradient,
+   tracker strip nested in the middle. Reference: physical Secret Hitler board. */
+.boards {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
+  overflow: hidden;
+  /* Two-tone gradient — calmer navy for the Liberal half (top),
+     more vibrant/saturated red for the Fascist half (bottom) so the
+     danger of the fascist track is visually distinct. */
+  background: linear-gradient(180deg,
+    #0d1b2c 0%,
+    #1d3654 22%,
+    #1d3654 32%,
+    #2a1f30 45%,
+    #6b1e1c 55%,
+    #5a1818 70%,
+    #3e1010 100%
+  );
+  box-shadow: var(--shadow-md), inset 0 0 24px rgba(0,0,0,.4);
+}
+.board {
   padding: 10px 14px;
   display: flex;
   align-items: center;
   gap: 12px;
-  border: 1px solid var(--border);
-  background: linear-gradient(180deg, var(--bg-card), var(--bg-1));
+  border: none;
+  background: transparent;
+  border-radius: 0;
 }
-.liberal-board { border-color: rgba(74,144,217,.3); background: linear-gradient(180deg, rgba(20,40,63,.4), rgba(20,40,63,.15)); }
-.fascist-board { border-color: rgba(200,64,56,.3); background: linear-gradient(180deg, rgba(46,20,20,.4), rgba(46,20,20,.15)); }
+.liberal-board {
+  border-bottom: 1px solid rgba(106,176,245,.15);
+}
+.fascist-board {
+  border-top: 1px solid rgba(255,90,74,.15);
+}
 .tracker-board {
-  border-color: rgba(212,166,74,.25);
-  background: linear-gradient(180deg, rgba(40,30,10,.35), rgba(40,30,10,.1));
+  /* Slim strip between the two policy lanes */
+  padding: 5px 14px;
   cursor: help;
   position: relative;
+  background: linear-gradient(180deg,
+    rgba(0,0,0,.3) 0%,
+    rgba(0,0,0,.15) 50%,
+    rgba(0,0,0,.3) 100%);
+  justify-content: center;
 }
-.tracker-board .board-label { color: var(--gold-glow); }
+.tracker-inline-label {
+  font-family: 'Cinzel', serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--gold);
+  text-shadow: 0 1px 2px rgba(0,0,0,.5);
+  flex-shrink: 0;
+}
 .tracker-board[data-tooltip]:hover::before {
   content: attr(data-tooltip);
   position: absolute;
@@ -829,16 +937,16 @@ input { font-family: inherit; font-size: inherit; color: inherit; background: no
 .tracker-track {
   display: flex !important;
   align-items: center;
-  gap: 10px;
-  flex: 1;
+  gap: 8px;
+  flex: 0;
   justify-content: center;
 }
 .tracker-track .tracker-cell {
-  width: 22px;
-  height: 22px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  background: rgba(255,255,255,.04);
-  border: 1.5px solid rgba(212,166,74,.25);
+  background: rgba(255,255,255,.06);
+  border: 1.5px solid rgba(212,166,74,.4);
   transition: all var(--t-med);
 }
 .tracker-track .tracker-cell.active {
@@ -864,15 +972,16 @@ input { font-family: inherit; font-size: inherit; color: inherit; background: no
   font-family: 'JetBrains Mono', monospace;
   font-weight: 700;
   font-size: 13px;
-  color: var(--text-faint);
+  color: var(--gold);
   letter-spacing: 1px;
   flex-shrink: 0;
-  min-width: 48px;
-  text-align: right;
+  min-width: 36px;
+  text-align: left;
+  text-shadow: 0 1px 2px rgba(0,0,0,.5);
 }
 .tracker-count.warning {
   color: var(--fascist-glow);
-  text-shadow: 0 0 8px rgba(255,90,74,.5);
+  text-shadow: 0 0 8px rgba(255,90,74,.5), 0 1px 2px rgba(0,0,0,.5);
 }
 .board-label {
   font-family: 'Cinzel', serif;
@@ -907,14 +1016,43 @@ input { font-family: inherit; font-size: inherit; color: inherit; background: no
   overflow: hidden;
 }
 .policy-cell.filled.liberal {
-  background: linear-gradient(180deg, var(--liberal) 0%, #2c5e90 100%);
+  background:
+    url("img/dove.svg") center / 82% no-repeat,
+    linear-gradient(180deg, #1d3654 0%, #0d1b2c 100%);
   border-color: var(--liberal-glow);
-  box-shadow: 0 0 12px rgba(106,176,245,.5), inset 0 0 12px rgba(255,255,255,.15);
+  box-shadow: 0 0 12px rgba(106,176,245,.5), inset 0 0 12px rgba(255,255,255,.1);
 }
 .policy-cell.filled.fascist {
-  background: linear-gradient(180deg, var(--fascist) 0%, #7a2620 100%);
+  background:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='44' fill='none' stroke='%23ffffff' stroke-width='1' opacity='0.4'/><g fill='%23ffcb47'><path d='M50 18 C44 28 42 38 47 47 L53 47 C58 38 56 28 50 18 Z'/><path d='M30 42 C22 50 22 62 30 68 C36 70 42 67 44 60 C45 52 41 47 36 44 C32 42 30 42 30 42 Z'/><path d='M70 42 C78 50 78 62 70 68 C64 70 58 67 56 60 C55 52 59 47 64 44 C68 42 70 42 70 42 Z'/><rect x='35' y='50' width='30' height='6' rx='2'/><path d='M40 56 Q42 75 50 80 Q58 75 60 56 Z' opacity='0.92'/></g></svg>") center / 70% no-repeat,
+    linear-gradient(180deg, var(--fascist) 0%, #7a2620 100%);
   border-color: var(--fascist-glow);
   box-shadow: 0 0 12px rgba(255,90,74,.5), inset 0 0 12px rgba(255,255,255,.15);
+}
+
+/* Danger zone — empty Fascist cells 4, 5, 6 are where Hitler-as-Chancellor
+   ends the game (3+ fascist policies enacted). Tint them progressively
+   warmer/more menacing so it's visually obvious those slots are dangerous. */
+.fascist-board .policy-cell:nth-child(4):not(.filled) {
+  background: rgba(255,90,74,0.08);
+  border-color: rgba(255,90,74,0.30);
+}
+.fascist-board .policy-cell:nth-child(5):not(.filled) {
+  background: rgba(255,90,74,0.10);
+  border-color: rgba(255,90,74,0.36);
+}
+.fascist-board .policy-cell:nth-child(6):not(.filled) {
+  background: rgba(255,90,74,0.13);
+  border-color: rgba(255,90,74,0.42);
+}
+/* Stronger warning glow on the cell that's about to be filled (next slot)
+   when the fascist track has hit the 3+ policy danger threshold. */
+.fascist-board .board-track.threshold-active .policy-cell:not(.filled):first-of-type {
+  animation: dangerGlow 2s ease-in-out infinite;
+}
+@keyframes dangerGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,90,74,0); }
+  50%      { box-shadow: 0 0 12px 0 rgba(255,90,74,0.6), inset 0 0 8px rgba(255,90,74,0.2); }
 }
 .policy-cell .cell-num {
   position: absolute;
@@ -1071,20 +1209,23 @@ input { font-family: inherit; font-size: inherit; color: inherit; background: no
 }
 .player-pill.you.president { border-color: var(--gold); }
 .player-pill.you.chancellor { border-color: var(--liberal); }
+/* YOU badge — inside pill, top-left corner */
 .player-pill.you::before {
   content: 'YOU';
   position: absolute;
-  top: -7px;
-  right: 6px;
+  top: 5px;
+  left: 5px;
   font-size: 9px;
   font-weight: 700;
-  letter-spacing: 1.5px;
+  letter-spacing: 1px;
   background: var(--green);
   color: #061612;
-  padding: 1px 6px;
-  border-radius: 4px;
-  z-index: 1;
+  padding: 2px 5px;
+  border-radius: 3px;
+  z-index: 2;
+  line-height: 1;
 }
+/* Vote-cast indicator — inside top-right, glowing */
 .player-pill.has-voted::after {
   content: '✓';
   position: absolute;
@@ -1093,6 +1234,8 @@ input { font-family: inherit; font-size: inherit; color: inherit; background: no
   font-size: 14px;
   color: var(--green);
   font-weight: 700;
+  text-shadow: 0 0 6px rgba(74,212,138,.6);
+  z-index: 2;
 }
 
 .player-pill.selectable { cursor: pointer; border-color: var(--gold); animation: glow 1.4s ease-in-out infinite; }
@@ -1119,6 +1262,43 @@ input { font-family: inherit; font-size: inherit; color: inherit; background: no
 .player-pill.president .player-avatar  { border-color: var(--gold); }
 .player-pill.chancellor .player-avatar { border-color: var(--liberal); }
 .player-pill.fascist-known .player-avatar  { border-color: var(--fascist); box-shadow: 0 0 0 1px var(--fascist) inset; }
+
+/* Hitler — distinct gold treatment (visible only to those who know the role:
+   self, fascist team in 5-6p, hitler in 5-6p, or anyone post game-over). */
+.player-pill.hitler-known {
+  border-color: var(--gold);
+  background: linear-gradient(180deg, rgba(212,166,74,0.15), rgba(60,30,10,0.35));
+  box-shadow: 0 0 12px rgba(212,166,74,0.4);
+}
+.player-pill.hitler-known .player-avatar {
+  border-color: var(--gold);
+  background: linear-gradient(135deg, rgba(212,166,74,0.35), rgba(46,20,20,0.7));
+  color: var(--gold-glow);
+}
+.player-pill.hitler-known .player-role-tag {
+  color: var(--gold-glow);
+  font-weight: 800;
+  text-shadow: 0 0 6px rgba(212,166,74,0.5);
+}
+.player-role-tag.hitler-known {
+  color: var(--gold-glow);
+  font-weight: 800;
+  text-shadow: 0 0 6px rgba(212,166,74,0.5);
+}
+
+/* Hitler in Chancellor seat at 3+ Fascist policies = INSTANT FASCIST WIN.
+   Pulse the pill red+gold so it's screamingly obvious. */
+.player-pill.hitler-danger {
+  animation: hitlerDanger 1.2s ease-in-out infinite;
+}
+@keyframes hitlerDanger {
+  0%, 100% {
+    box-shadow: 0 0 12px rgba(212,166,74,0.4), 0 0 0 0 rgba(255,90,74,0.5);
+  }
+  50% {
+    box-shadow: 0 0 24px rgba(212,166,74,0.8), 0 0 32px 6px rgba(255,90,74,0.55);
+  }
+}
 .player-pill.investigated .player-avatar::after {
   content: '🔍';
   position: absolute;
@@ -1221,12 +1401,12 @@ input { font-family: inherit; font-size: inherit; color: inherit; background: no
   margin-top: 12px;
 }
 .vote-btn {
-  padding: 24px;
+  padding: 14px;
   border-radius: var(--radius-md);
   font-family: 'Cinzel', serif;
   font-weight: 800;
-  font-size: 24px;
-  letter-spacing: 4px;
+  font-size: 18px;
+  letter-spacing: 3px;
   text-transform: uppercase;
   transition: all var(--t-fast);
   border: 2px solid;
@@ -1303,21 +1483,46 @@ input { font-family: inherit; font-size: inherit; color: inherit; background: no
   padding: 10px;
 }
 .policy-card.liberal {
-  background: linear-gradient(180deg, #2c5e90 0%, #14283f 100%);
+  background:
+    url("img/dove.svg") center 38% / 88% no-repeat,
+    linear-gradient(180deg, #1d3654 0%, #0a1525 100%);
   border-color: var(--liberal-glow);
   color: #cae3ff;
   box-shadow: 0 8px 16px rgba(0,0,0,.4), inset 0 0 16px rgba(106,176,245,.2);
 }
 .policy-card.fascist {
-  background: linear-gradient(180deg, #7a2620 0%, #2e1414 100%);
+  background:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='44' fill='none' stroke='%23ffffff' stroke-width='1.2' opacity='0.5'/><g fill='%23ffcb47'><path d='M50 18 C44 28 42 38 47 47 L53 47 C58 38 56 28 50 18 Z'/><path d='M30 42 C22 50 22 62 30 68 C36 70 42 67 44 60 C45 52 41 47 36 44 C32 42 30 42 30 42 Z'/><path d='M70 42 C78 50 78 62 70 68 C64 70 58 67 56 60 C55 52 59 47 64 44 C68 42 70 42 70 42 Z'/><rect x='35' y='50' width='30' height='6' rx='2'/><path d='M40 56 Q42 75 50 80 Q58 75 60 56 Z' opacity='0.92'/></g></svg>") center 38% / 80% no-repeat,
+    linear-gradient(180deg, #7a2620 0%, #2e1414 100%);
   border-color: var(--fascist-glow);
   color: #ffcec8;
   box-shadow: 0 8px 16px rgba(0,0,0,.4), inset 0 0 16px rgba(255,90,74,.2);
 }
-.policy-card.actionable:hover { transform: translateY(-4px) scale(1.03); }
-.policy-card .corner { position: absolute; top: 6px; font-size: 16px; }
-.policy-card .corner.tl { left: 6px; }
+/* Anchor text label to the bottom so the emblem owns the top half */
+.policy-card {
+  justify-content: flex-end;
+  padding: 10px 10px 14px;
+}
+.policy-card .corner {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  font-size: 0;        /* hide the emoji glyph */
+  opacity: .55;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+.policy-card .corner.tl { top: 6px; left: 6px; }
 .policy-card .corner.br { bottom: 6px; right: 6px; transform: rotate(180deg); }
+/* Crisp mini SVG icons in place of the emoji glyphs */
+.policy-card.liberal .corner {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23cae3ff'><path d='M21 14 Q21 11 17 9 Q12 7 8 8 Q5 7 4 10 L2 9 L4 13 Q8 15 12 14 L15 16 Q19 17 21 14 Z'/><path d='M22 16 L24 17 L23 19 L20 18 Z' opacity='0.7'/></svg>");
+}
+.policy-card.fascist .corner {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffd96b'><path d='M12 3 Q10 7 11 11 L13 11 Q14 7 12 3 Z'/><path d='M6 9 Q3 13 6 16 Q8 17 10 15 Q11 12 8 10 Q7 9 6 9 Z'/><path d='M18 9 Q21 13 18 16 Q16 17 14 15 Q13 12 16 10 Q17 9 18 9 Z'/><rect x='8' y='12' width='8' height='2' rx='0.5'/><path d='M9 14 Q10 19 12 20 Q14 19 15 14 Z'/></svg>");
+}
+.policy-card.actionable:hover { transform: translateY(-4px) scale(1.03); }
 
 .reveal-info {
   text-align: center;
@@ -1916,20 +2121,75 @@ input { font-family: inherit; font-size: inherit; color: inherit; background: no
 @media (min-width: 768px) {
   .game-main {
     padding: 24px;
-    max-width: 1480px;
+    max-width: 1560px;
     margin: 0 auto;
     width: 100%;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 470px;
+    grid-template-columns: 240px minmax(0, 1fr) 470px;
+    grid-template-rows: auto minmax(0, 1fr);
     align-items: start;
-    gap: 24px;
+    gap: 20px;
     overflow: hidden;  /* let inner panels manage their own scroll */
   }
+  /* Boards top-center, stage below, player rail full-height on the left,
+     deck+history rail full-height on the right.
+     Both the boards and stage share the same max-width and are centered
+     within their grid cell so they line up as one visual column. */
+  .game-boards { grid-column: 2; grid-row: 1; min-width: 0; max-width: 600px; margin: 0 auto; width: 100%; }
+  .game-stage  { grid-column: 2; grid-row: 2; min-width: 0; max-width: 600px; margin: 0 auto; width: 100%; overflow-y: auto; max-height: calc(100vh - 240px); padding-right: 4px; }
+  .game-left   { grid-column: 1; grid-row: 1 / span 2; min-width: 0; min-height: 0; }
+  .game-side   { grid-column: 3; grid-row: 1 / span 2; }
+  /* legacy class kept for safety if any code refers to it */
   .game-content {
     min-width: 0;
     overflow-y: auto;
     max-height: calc(100vh - 110px);
     padding-right: 4px;
+  }
+
+  /* Player rail: 2-column grid with breathing room, full-height scroll */
+  .game-left .players-ring {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    background: linear-gradient(180deg, var(--bg-card), var(--bg-1));
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 14px;
+    align-content: start;
+    max-height: calc(100vh - 110px);
+    overflow-y: auto;
+    position: sticky;
+    top: 0;
+  }
+  .game-left .player-pill {
+    padding: 22px 8px 12px;       /* extra top for inside YOU/AI badge */
+    font-size: 11px;
+    gap: 5px;
+    overflow: hidden;
+    min-height: 96px;             /* consistent height across rows */
+  }
+  .game-left .player-avatar {
+    width: 40px;
+    height: 40px;
+    font-size: 14px;
+  }
+  .game-left .player-name {
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.1;
+  }
+  .game-left .player-role-tag {
+    font-size: 8px;
+    letter-spacing: 1.2px;
+    margin-top: 1px;
+  }
+  /* Smaller YOU/AI labels in the compact pills so they don't dominate */
+  .game-left .player-pill.you::before,
+  .game-left .player-pill.bot::before {
+    font-size: 8px;
+    padding: 1.5px 4px;
+    letter-spacing: .5px;
   }
   /* Right rail: action bar on top, deck + history below */
   .game-side {
@@ -1985,40 +2245,43 @@ input { font-family: inherit; font-size: inherit; color: inherit; background: no
   .side-actions { display: none; }
 }
 
-  /* Compact policy boards: fixed-width cells, left-aligned */
+  /* Compact policy boards: 6-column grid so columns line up across lanes.
+     Width follows the parent (game-boards) which is itself capped, so the
+     boards and the stage below share the same visual column. */
+  .boards {
+    width: 100%;
+  }
   .board {
-    padding: 12px 16px;
+    padding: 8px 14px;
   }
   .board-label {
-    width: 70px;
+    width: 60px;
+    font-size: 10px;
+    letter-spacing: 1.5px;
   }
   .liberal-board .board-track,
   .fascist-board .board-track {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 6px;
     flex: 1;
-    gap: 8px;
-    justify-content: flex-start;
     align-items: center;
   }
   .tracker-board {
-    padding: 8px 16px;
-  }
-  .tracker-board .board-label {
-    width: 70px;
-    line-height: 1.15;
+    padding: 6px 14px;
+    gap: 14px;
   }
   .tracker-track .tracker-cell {
-    width: 26px;
-    height: 26px;
+    width: 16px;
+    height: 16px;
   }
   .policy-cell {
-    flex: 0 0 56px;
-    width: 56px;
+    width: auto;
     aspect-ratio: 1 / 1.4;
     border-radius: 5px;
   }
   .policy-cell .cell-num {
-    font-size: 12px;
+    font-size: 11px;
   }
   .deck-info {
     flex-direction: column;
