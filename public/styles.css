@@ -4,6 +4,7 @@
    ========================================================== */
 
 :root {
+  /* === Dark theme (default) === */
   --bg-0: #0a0a0f;
   --bg-1: #12131a;
   --bg-2: #1a1c26;
@@ -14,6 +15,11 @@
   --text: #e8eaf2;
   --text-dim: #9095a8;
   --text-faint: #5a5e72;
+
+  /* Screen background tint (top of radial gradient) */
+  --screen-tint: #1a1c2e;
+  --screen-tint-game: #14172b;
+  --grid-line: rgba(74, 144, 217, .03);
 
   --liberal: #4a90d9;
   --liberal-glow: #6ab0f5;
@@ -37,6 +43,33 @@
   --t-fast: 180ms cubic-bezier(.4,0,.2,1);
   --t-med: 320ms cubic-bezier(.4,0,.2,1);
   --t-slow: 600ms cubic-bezier(.4,0,.2,1);
+}
+
+/* === Light theme overrides ===
+   Game pieces (boards, policy cards, role cards, deck stack) keep their
+   dark themed styling — only the surrounding chrome (page bg, cards,
+   modals, text) flips to light. */
+[data-theme="light"] {
+  /* Soft, muted greys — no pure white. Restful on the eyes and lets the
+     game pieces (boards, role cards, deck) stay visually dominant. */
+  --bg-0: #d8dde5;
+  --bg-1: #cdd3dc;
+  --bg-2: #e2e6ec;
+  --bg-3: #b8bfca;
+  --bg-card: #e2e6ec;
+  --border: #b6bcc6;
+  --border-strong: #8a91a0;
+  --text: #1c1e28;
+  --text-dim: #4d5360;
+  --text-faint: #757a87;
+
+  --screen-tint: #c4cbd6;
+  --screen-tint-game: #b6bfcc;
+  --grid-line: rgba(74, 144, 217, .12);
+
+  --shadow-lg: 0 24px 48px rgba(40,50,70,.18), 0 4px 12px rgba(40,50,70,.12);
+  --shadow-md: 0 12px 24px rgba(40,50,70,.15), 0 2px 6px rgba(40,50,70,.10);
+  --shadow-sm: 0 4px 12px rgba(40,50,70,.14);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -118,8 +151,8 @@ input { font-family: inherit; font-size: inherit; color: inherit; background: no
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(74, 144, 217, .03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(74, 144, 217, .03) 1px, transparent 1px);
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
   background-size: 32px 32px;
   pointer-events: none;
   mask-image: radial-gradient(ellipse at center, black 0%, transparent 70%);
@@ -129,7 +162,7 @@ input { font-family: inherit; font-size: inherit; color: inherit; background: no
    WELCOME / FORMS
    ========================================================= */
 #screen-welcome, #screen-create, #screen-join {
-  background: radial-gradient(ellipse at top, #1a1c2e 0%, var(--bg-0) 60%), var(--bg-0);
+  background: radial-gradient(ellipse at top, var(--screen-tint) 0%, var(--bg-0) 60%), var(--bg-0);
   align-items: flex-start;
   justify-content: center;
   padding: 32px 20px;
@@ -160,7 +193,7 @@ input { font-family: inherit; font-size: inherit; color: inherit; background: no
   letter-spacing: 4px;
   line-height: 1;
   text-transform: uppercase;
-  background: linear-gradient(180deg, #fff 0%, #aab1c8 100%);
+  background: linear-gradient(180deg, var(--text) 0%, var(--text-dim) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -326,7 +359,7 @@ input { font-family: inherit; font-size: inherit; color: inherit; background: no
    LOBBY
    ========================================================= */
 #screen-lobby {
-  background: radial-gradient(ellipse at top, #1a1c2e 0%, var(--bg-0) 60%);
+  background: radial-gradient(ellipse at top, var(--screen-tint) 0%, var(--bg-0) 60%);
   align-items: flex-start;
   justify-content: center;
   padding: 24px 16px;
@@ -642,7 +675,7 @@ input { font-family: inherit; font-size: inherit; color: inherit; background: no
    ROLE REVEAL (private screen)
    ========================================================= */
 #screen-role {
-  background: radial-gradient(ellipse at center, #1a1c2e 0%, var(--bg-0) 60%);
+  background: radial-gradient(ellipse at center, var(--screen-tint) 0%, var(--bg-0) 60%);
   align-items: center;
   justify-content: center;
   padding: 24px;
@@ -780,7 +813,7 @@ input { font-family: inherit; font-size: inherit; color: inherit; background: no
    GAME SCREEN
    ========================================================= */
 #screen-game {
-  background: radial-gradient(ellipse at top, #14172b 0%, var(--bg-0) 50%), var(--bg-0);
+  background: radial-gradient(ellipse at top, var(--screen-tint-game) 0%, var(--bg-0) 50%), var(--bg-0);
   flex-direction: column;
 }
 
@@ -1017,7 +1050,7 @@ input { font-family: inherit; font-size: inherit; color: inherit; background: no
 }
 .policy-cell.filled.liberal {
   background:
-    url("img/dove.svg") center / 82% no-repeat,
+    url("img/dove.svg") center / 70% no-repeat,
     linear-gradient(180deg, #1d3654 0%, #0d1b2c 100%);
   border-color: var(--liberal-glow);
   box-shadow: 0 0 12px rgba(106,176,245,.5), inset 0 0 12px rgba(255,255,255,.1);
@@ -1484,7 +1517,7 @@ input { font-family: inherit; font-size: inherit; color: inherit; background: no
 }
 .policy-card.liberal {
   background:
-    url("img/dove.svg") center 38% / 88% no-repeat,
+    url("img/dove.svg") center 38% / 75% no-repeat,
     linear-gradient(180deg, #1d3654 0%, #0a1525 100%);
   border-color: var(--liberal-glow);
   color: #cae3ff;
@@ -1838,7 +1871,7 @@ input { font-family: inherit; font-size: inherit; color: inherit; background: no
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 28px;
-  max-width: 480px;
+  max-width: 600px;
   width: 100%;
   max-height: 80vh;
   overflow-y: auto;
@@ -2498,3 +2531,45 @@ input { font-family: inherit; font-size: inherit; color: inherit; background: no
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--bg-3); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+
+/* =========================================================
+   CORNER ACTIONS — theme toggle + GitHub link, top-right
+   ========================================================= */
+.corner-actions {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 500;
+  display: flex;
+  gap: 8px;
+}
+.corner-actions .corner-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+  transition: all var(--t-fast);
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  text-decoration: none;
+  box-shadow: var(--shadow-sm);
+  padding: 0;
+}
+.corner-actions .corner-btn:hover {
+  background: var(--bg-3);
+  color: var(--gold);
+  border-color: var(--gold);
+  transform: scale(1.06);
+}
+.corner-actions svg { width: 18px; height: 18px; }
+.corner-actions .icon-sun,
+.corner-actions .icon-moon { display: none; }
+/* Dark theme (default) — show sun (clicking switches to light) */
+.corner-actions .icon-sun { display: block; }
+[data-theme="light"] .corner-actions .icon-sun { display: none; }
+[data-theme="light"] .corner-actions .icon-moon { display: block; }

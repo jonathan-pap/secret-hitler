@@ -1225,6 +1225,23 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target.id === 'modal' || e.target.classList.contains('modal-backdrop')) closeModal();
   });
 
+  // Theme toggle (dark/light) — choice persists in localStorage.
+  // The boot script in index.html applies the theme before CSS paints so
+  // there's no flash on reload.
+  const themeBtn = $('theme-toggle');
+  if (themeBtn) {
+    themeBtn.onclick = () => {
+      const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+      if (isLight) {
+        document.documentElement.removeAttribute('data-theme');
+        try { localStorage.setItem('sh.theme', 'dark'); } catch {}
+      } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+        try { localStorage.setItem('sh.theme', 'light'); } catch {}
+      }
+    };
+  }
+
   // Auto-fill code from URL on welcome
   const params = new URLSearchParams(location.search);
   if (params.get('code')) {
