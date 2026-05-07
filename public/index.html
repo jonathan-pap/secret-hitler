@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Secret Hitler — Online</title>
+<link rel="stylesheet" href="styles.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet" />
+</head>
+<body>
+<div id="app">
+
+  <!-- ========== CONNECTION OVERLAY ========== -->
+  <div id="conn-overlay" class="conn-overlay">
+    <div class="spinner"></div>
+    <div id="conn-text">Connecting…</div>
+  </div>
+
+  <!-- ========== WELCOME ========== -->
+  <section id="screen-welcome" class="screen">
+    <div class="bg-grid"></div>
+    <div class="welcome-wrap">
+      <div class="brand">
+        <div class="brand-mark">
+          <svg viewBox="0 0 64 64" width="56" height="56" aria-hidden="true">
+            <circle cx="32" cy="32" r="30" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="M16 22 L32 38 L48 22" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="32" cy="46" r="3" fill="currentColor"/>
+          </svg>
+        </div>
+        <h1>Secret <span>Hitler</span></h1>
+        <p class="tagline">A game of deception, deduction, and democracy</p>
+      </div>
+
+      <div class="welcome-card">
+        <div class="welcome-actions">
+          <button id="btn-create" class="primary-btn">Create Game</button>
+          <div class="divider-or"><span>or</span></div>
+          <button id="btn-join-show" class="secondary-btn">Join with Code</button>
+        </div>
+        <button id="btn-rules-welcome" class="link-btn">How to play</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== CREATE FORM ========== -->
+  <section id="screen-create" class="screen">
+    <div class="bg-grid"></div>
+    <div class="form-wrap">
+      <button class="back-btn" data-back="welcome">← Back</button>
+      <h2 class="form-title">Create Game</h2>
+      <p class="form-sub">You'll be the host. Share the room code so others can join.</p>
+      <label class="field-label" for="create-name">Your Name</label>
+      <input type="text" id="create-name" class="text-input" placeholder="Enter your name" maxlength="14" />
+      <button id="btn-create-go" class="primary-btn">Create Room</button>
+    </div>
+  </section>
+
+  <!-- ========== JOIN FORM ========== -->
+  <section id="screen-join" class="screen">
+    <div class="bg-grid"></div>
+    <div class="form-wrap">
+      <button class="back-btn" data-back="welcome">← Back</button>
+      <h2 class="form-title">Join Game</h2>
+      <p class="form-sub">Enter the room code from your host.</p>
+      <label class="field-label" for="join-code">Room Code</label>
+      <input type="text" id="join-code" class="text-input code-input" placeholder="ABCD" maxlength="4" autocapitalize="characters" />
+      <label class="field-label" for="join-name">Your Name</label>
+      <input type="text" id="join-name" class="text-input" placeholder="Enter your name" maxlength="14" />
+      <button id="btn-join-go" class="primary-btn">Join Room</button>
+    </div>
+  </section>
+
+  <!-- ========== LOBBY ========== -->
+  <section id="screen-lobby" class="screen">
+    <div class="bg-grid"></div>
+    <div class="lobby-wrap">
+      <div class="lobby-header">
+        <div class="room-code-display">
+          <div class="rc-label">Room Code</div>
+          <div class="rc-value" id="lobby-code">----</div>
+          <button id="btn-copy-code" class="copy-btn" title="Copy">
+            <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H8V7h11v14z"/></svg>
+          </button>
+        </div>
+        <button id="btn-share" class="share-btn">
+          <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
+          Share Link
+        </button>
+      </div>
+
+      <div class="lobby-section">
+        <div class="lobby-section-header">
+          <h3>Players</h3>
+          <span id="lobby-count" class="count-badge">1</span>
+        </div>
+        <div id="lobby-players" class="lobby-players"></div>
+        <p id="lobby-need" class="lobby-need">Waiting for at least 5 players…</p>
+      </div>
+
+      <div class="lobby-section">
+        <h3>Roles</h3>
+        <div class="role-summary" id="lobby-roles">
+          <div class="lib"><strong>—</strong>Liberals</div>
+          <div class="fasc"><strong>—</strong>Fascists</div>
+          <div class="hit"><strong>1</strong>Hitler</div>
+        </div>
+      </div>
+
+      <div class="lobby-actions">
+        <button id="btn-start" class="primary-btn" disabled>Begin Game</button>
+        <button id="btn-leave" class="secondary-btn">Leave Room</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== ROLE REVEAL (PRIVATE) ========== -->
+  <section id="screen-role" class="screen">
+    <div class="reveal-wrap">
+      <div class="role-card" id="role-card">
+        <div class="role-card-inner">
+          <div class="role-party" id="role-party"></div>
+          <div class="role-name" id="role-name"></div>
+          <div class="role-portrait" id="role-portrait"></div>
+          <div class="role-info" id="role-info"></div>
+          <div class="role-known" id="role-known"></div>
+        </div>
+      </div>
+      <div class="role-actions">
+        <p class="role-wait" id="role-wait">Waiting for host to start the round…</p>
+        <button id="btn-role-start" class="primary-btn hidden">Start First Round</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== GAME ========== -->
+  <section id="screen-game" class="screen">
+    <header class="game-header">
+      <div class="header-left">
+        <button id="btn-menu" class="icon-btn" aria-label="Menu">
+          <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+        </button>
+        <div class="round-info">
+          <span class="round-label">Round</span>
+          <span id="round-num">1</span>
+        </div>
+      </div>
+      <div class="header-center">
+        <div class="track-mini" id="track-mini"></div>
+      </div>
+      <div class="header-right">
+        <button id="btn-myrole" class="icon-btn" aria-label="My role" title="My role">
+          <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5zm-3 8V7a3 3 0 1 1 6 0v3z"/></svg>
+        </button>
+        <button id="btn-log" class="icon-btn" aria-label="Game log">
+          <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm2 18H6V4h7v5h5z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="game-main">
+      <div class="boards">
+        <div class="board liberal-board">
+          <div class="board-label">Liberal</div>
+          <div class="board-track" id="liberal-track"></div>
+        </div>
+        <div class="board fascist-board">
+          <div class="board-label">Fascist</div>
+          <div class="board-track" id="fascist-track"></div>
+        </div>
+      </div>
+
+      <div class="players-ring" id="players-ring"></div>
+
+      <div class="center-stage" id="center-stage"></div>
+
+      <div class="deck-info">
+        <div class="deck-pile">
+          <div class="pile-label">Draw</div>
+          <div class="pile-count" id="draw-count">17</div>
+        </div>
+        <div class="election-tracker">
+          <div class="tracker-label">Election Tracker</div>
+          <div class="tracker-dots" id="tracker-dots">
+            <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+          </div>
+        </div>
+        <div class="deck-pile">
+          <div class="pile-label">Discard</div>
+          <div class="pile-count" id="discard-count">0</div>
+        </div>
+      </div>
+    </main>
+  </section>
+
+  <!-- ========== END ========== -->
+  <section id="screen-end" class="screen">
+    <div class="end-wrap">
+      <div class="end-banner" id="end-banner">
+        <h1 id="end-title">LIBERALS WIN</h1>
+        <p id="end-reason"></p>
+      </div>
+      <div class="end-roles" id="end-roles"></div>
+      <div class="end-actions">
+        <button id="btn-restart" class="primary-btn hidden">Play Again (same players)</button>
+        <button id="btn-leave-end" class="secondary-btn">Back to Menu</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== MODAL ========== -->
+  <div id="modal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <button class="modal-close" id="modal-close">×</button>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+</div>
+<script src="client.js"></script>
+</body>
+</html>
