@@ -14,8 +14,11 @@ const { pickBotName, decideBotAction } = require('./bots');
 
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, 'public');
+const DATA_DIR = path.join(__dirname, 'data');
+const STATE_FILE = path.join(DATA_DIR, 'rooms.json');
 const BOT_TICK_MS = 1100;     // delay between bot actions (feels human)
 const BOT_TICK_JITTER = 600;  // random extra delay
+const SAVE_DEBOUNCE_MS = 800; // batch writes
 
 // ==========================================================
 // GAME RULES TABLES
@@ -70,10 +73,12 @@ function newRoomCode() {
 
 function makeRoom(hostToken) {
   const c = newRoomCode();
+  const now = Date.now();
   const room = {
     code: c,
     hostToken,
-    createdAt: Date.now(),
+    createdAt: now,
+    lastActivityAt: now,
     players: [],         // { token, name, role, alive, investigated, connected, idx }
     sockets: new Map(),  // token -> ws
     phase: 'lobby',
@@ -81,6 +86,74 @@ function makeRoom(hostToken) {
   };
   rooms.set(c, room);
   return room;
+}
+
+// ==========================================================
+// PERSISTENCE — survive crashes and short server restarts
+// ==========================================================
+let _saveTimer = null;
+function scheduleSave() {
+  if (_saveTimer) return;
+  _saveTimer = setTimeout(() => { _saveTimer = null; saveState(); }, SAVE_DEBOUNCE_MS);
+}
+
+function saveState() {
+  try {
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    const data = [];
+    for (const room of rooms.values()) {
+      // Skip ended games — no point persisting
+      if (room.phase === 'end') continue;
+      data.push({
+        code: room.code,
+        hostToken: room.hostToken,
+        createdAt: room.createdAt,
+        lastActivityAt: room.lastActivityAt,
+        phase: room.phase,
+        players: room.players.map(p => ({
+          token: p.token, name: p.name, role: p.role,
+          alive: p.alive, investigated: p.investigated,
+          confirmedNotHitler: p.confirmedNotHitler,
+          idx: p.idx, isBot: !!p.isBot,
+          connected: false, // will reconnect after restart
+        })),
+        state: room.state, // freshGameState shape; safe JSON
+      });
+    }
+    // Atomic write: temp file then rename
+    const tmp = STATE_FILE + '.tmp';
+    fs.writeFileSync(tmp, JSON.stringify(data), 'utf8');
+    fs.renameSync(tmp, STATE_FILE);
+  } catch (e) {
+    console.error('[persist] save failed:', e.message);
+  }
+}
+
+function loadState() {
+  try {
+    if (!fs.existsSync(STATE_FILE)) return;
+    const data = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
+    let count = 0;
+    for (const r of data) {
+      const room = {
+        code: r.code,
+        hostToken: r.hostToken,
+        createdAt: r.createdAt || Date.now(),
+        lastActivityAt: r.lastActivityAt || Date.now(),
+        phase: r.phase,
+        players: r.players,
+        sockets: new Map(),       // fresh — clients will reconnect
+        state: r.state,
+      };
+      // Ensure flags
+      room.players.forEach(p => { p.connected = false; });
+      rooms.set(room.code, room);
+      count++;
+    }
+    if (count) console.log(`[persist] restored ${count} room(s) from disk`);
+  } catch (e) {
+    console.error('[persist] load failed:', e.message);
+  }
 }
 
 function freshGameState() {
@@ -126,6 +199,7 @@ function send(ws, type, payload = {}) {
 }
 
 function broadcastRoom(room) {
+  room.lastActivityAt = Date.now();
   for (const p of room.players) {
     if (p.isBot) continue;
     const ws = room.sockets.get(p.token);
@@ -133,6 +207,7 @@ function broadcastRoom(room) {
     send(ws, 'state', { state: viewFor(room, p.token) });
   }
   scheduleBotTick(room);
+  scheduleSave();
 }
 
 // ==========================================================
@@ -953,14 +1028,50 @@ wss.on('connection', ws => {
   ws.on('error', () => {});
 });
 
-// Periodically clean up empty rooms
+// Periodic cleanup — tiered, conservative. Mid-game rooms with anyone
+// still seated are kept for hours so people can rejoin after dinner.
 setInterval(() => {
+  const now = Date.now();
+  let removed = 0;
   for (const [code, room] of rooms.entries()) {
-    if (room.players.length === 0 || room.players.every(p => !p.connected)) {
-      if (Date.now() - (room.createdAt || 0) > 1000 * 60 * 30) rooms.delete(code);
+    const idleMs = now - (room.lastActivityAt || room.createdAt || 0);
+    const allBots = room.players.length > 0 && room.players.every(p => p.isBot);
+    const allOffline = room.players.every(p => !p.connected || p.isBot);
+    const inGame = room.phase !== 'lobby' && room.phase !== 'end';
+
+    // Truly empty room (everyone left, no seats) — clean up after 10 min
+    if (room.players.length === 0 && idleMs > 10 * 60 * 1000) {
+      rooms.delete(code); removed++; continue;
+    }
+    // Lobby with no humans & no activity — 30 min
+    if (room.phase === 'lobby' && allOffline && idleMs > 30 * 60 * 1000) {
+      rooms.delete(code); removed++; continue;
+    }
+    // Bot-only room (humans bailed) — 1 hour
+    if (allBots && idleMs > 60 * 60 * 1000) {
+      rooms.delete(code); removed++; continue;
+    }
+    // Ended games — 2 hours (people might want to see the end screen)
+    if (room.phase === 'end' && idleMs > 2 * 60 * 60 * 1000) {
+      rooms.delete(code); removed++; continue;
+    }
+    // Mid-game with everyone offline — 6 hours grace (dinner / overnight)
+    if (inGame && allOffline && idleMs > 6 * 60 * 60 * 1000) {
+      rooms.delete(code); removed++; continue;
+    }
+    // Anything older than 24 hours, regardless of state
+    if (idleMs > 24 * 60 * 60 * 1000) {
+      rooms.delete(code); removed++; continue;
     }
   }
-}, 1000 * 60 * 5);
+  if (removed) {
+    console.log(`[cleanup] removed ${removed} stale room(s); ${rooms.size} remaining`);
+    scheduleSave();
+  }
+}, 5 * 60 * 1000);
+
+// Restore rooms before listening so reconnects work immediately
+loadState();
 
 httpServer.listen(PORT, () => {
   console.log(`\n  ┌──────────────────────────────────────────────┐`);
@@ -981,4 +1092,22 @@ httpServer.listen(PORT, () => {
     }
   }
   console.log('');
+});
+
+// Save snapshot on graceful shutdown (Render sends SIGTERM ~30s before kill)
+function shutdown(signal) {
+  console.log(`[shutdown] ${signal} received — flushing state to disk`);
+  if (_saveTimer) { clearTimeout(_saveTimer); _saveTimer = null; }
+  saveState();
+  // Close http server, then exit
+  httpServer.close(() => process.exit(0));
+  // Hard exit if close hangs
+  setTimeout(() => process.exit(0), 4000).unref();
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT',  () => shutdown('SIGINT'));
+process.on('uncaughtException', (e) => {
+  console.error('[uncaughtException]', e);
+  try { saveState(); } catch {}
+  process.exit(1);
 });

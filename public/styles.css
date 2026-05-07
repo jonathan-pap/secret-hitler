@@ -1241,10 +1241,29 @@ input { font-family: inherit; font-size: inherit; color: inherit; background: no
   border-color: var(--fascist);
   color: var(--fascist-glow);
 }
+.vote-btn { position: relative; }
 .vote-btn:hover { transform: translateY(-2px) scale(1.02); }
 .vote-btn:active { transform: scale(.98); }
-.vote-btn.cast { opacity: .7; }
-.vote-btn.unselected { opacity: .25; }
+
+/* Your currently-chosen ballot — brightly highlighted with a check */
+.vote-btn.cast {
+  box-shadow: 0 0 0 2px currentColor, 0 0 24px rgba(255,255,255,.15);
+  transform: scale(1.02);
+}
+.vote-btn.cast::after {
+  content: '✓';
+  position: absolute;
+  top: 6px;
+  right: 14px;
+  font-family: 'Inter', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+/* The other option, while you've already voted — clearly clickable */
+.vote-btn.dim { opacity: .55; }
+.vote-btn.dim:hover { opacity: 1; }
 
 .vote-progress {
   text-align: center;
@@ -1912,10 +1931,11 @@ input { font-family: inherit; font-size: inherit; color: inherit; background: no
     max-height: calc(100vh - 110px);
     padding-right: 4px;
   }
-  /* Right rail: deck on the left, history beside it */
+  /* Right rail: action bar on top, deck + history below */
   .game-side {
     display: grid;
     grid-template-columns: 130px minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
     gap: 14px;
     position: sticky;
     top: 0;
@@ -1923,6 +1943,47 @@ input { font-family: inherit; font-size: inherit; color: inherit; background: no
     max-height: calc(100vh - 110px);
     min-height: 0;
   }
+  .side-actions {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .side-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 10px;
+    background: linear-gradient(180deg, var(--bg-card), var(--bg-1));
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-dim);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    transition: all var(--t-fast);
+    box-shadow: var(--shadow-sm);
+  }
+  .side-btn svg { flex-shrink: 0; }
+  .side-btn:hover {
+    color: var(--gold);
+    border-color: var(--gold);
+    background: linear-gradient(180deg, var(--bg-2), var(--bg-card));
+    transform: translateY(-1px);
+    box-shadow: 0 6px 12px rgba(0,0,0,.45), 0 0 12px rgba(212,166,74,.15);
+  }
+  .side-btn:active { transform: translateY(0); }
+
+  /* Hide redundant header icons on desktop now that side buttons exist */
+  .header-right .icon-btn { display: none; }
+}
+
+/* On mobile (no side rail), keep header icon buttons visible */
+@media (max-width: 767px) {
+  .side-actions { display: none; }
+}
 
   /* Compact policy boards: fixed-width cells, left-aligned */
   .board {

@@ -394,10 +394,17 @@ function renderGame(view) {
   // Side history panel (desktop only — element exists but hidden on mobile)
   renderSideHistory(view);
 
-  // Header buttons
-  $('btn-menu').onclick = () => showMenu(view);
-  $('btn-log').onclick = () => showLog(view);
-  $('btn-myrole').onclick = () => showMyRole(view);
+  // Header + side action buttons (both wired so mobile + desktop work)
+  const wireBtn = (id, fn) => { const b = $(id); if (b) b.onclick = fn; };
+  const onMenu = () => showMenu(view);
+  const onLog = () => showLog(view);
+  const onRole = () => showMyRole(view);
+  wireBtn('btn-menu', onMenu);
+  wireBtn('btn-log', onLog);
+  wireBtn('btn-myrole', onRole);
+  wireBtn('btn-menu-side', onMenu);
+  wireBtn('btn-log-side', onLog);
+  wireBtn('btn-myrole-side', onRole);
 }
 
 let _lastHistoryLen = 0;
@@ -600,20 +607,19 @@ function stageVoting(view, stage, pres, chan) {
     return;
   }
 
+  // Buttons stay clickable while voting is open — you can change your vote
+  // up until the final ballot comes in (matches the face-down-ballot rule).
+  const jaCls   = 'vote-btn ja'   + (v.myVote === 'ja'   ? ' cast' : (v.myVote ? ' dim' : ''));
+  const neinCls = 'vote-btn nein' + (v.myVote === 'nein' ? ' cast' : (v.myVote ? ' dim' : ''));
+  stage.appendChild(el('div', { class: 'vote-buttons' },
+    el('button', { class: jaCls,   onClick: () => action('vote', { vote: 'ja' }) }, 'Ja!'),
+    el('button', { class: neinCls, onClick: () => action('vote', { vote: 'nein' }) }, 'Nein!'),
+  ));
   if (v.myVote) {
-    // Already voted — show what I picked
-    const buttons = el('div', { class: 'vote-buttons' });
-    buttons.appendChild(el('button', { class: 'vote-btn ja' + (v.myVote === 'ja' ? ' cast' : ' unselected') }, 'Ja!'));
-    buttons.appendChild(el('button', { class: 'vote-btn nein' + (v.myVote === 'nein' ? ' cast' : ' unselected') }, 'Nein!'));
-    stage.appendChild(buttons);
     stage.appendChild(el('div', { class: 'vote-progress', html:
-      `Your vote is locked. <strong>${v.hasVoted.length}/${v.total}</strong> votes in.`
+      `You voted <strong>${v.myVote === 'ja' ? 'JA' : 'NEIN'}</strong> — tap the other to change · <strong>${v.hasVoted.length}/${v.total}</strong> ballots in`
     }));
   } else {
-    stage.appendChild(el('div', { class: 'vote-buttons' },
-      el('button', { class: 'vote-btn ja',   onClick: () => action('vote', { vote: 'ja' }) }, 'Ja!'),
-      el('button', { class: 'vote-btn nein', onClick: () => action('vote', { vote: 'nein' }) }, 'Nein!'),
-    ));
     stage.appendChild(el('div', { class: 'vote-progress', html:
       `<strong>${v.hasVoted.length}/${v.total}</strong> votes cast`
     }));
