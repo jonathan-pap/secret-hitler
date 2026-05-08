@@ -9,11 +9,19 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet" />
 <script>
-  // Apply saved theme before CSS paints to prevent a flash of wrong theme.
+  // Apply saved themes before CSS paints — prevents flash on reload.
+  // Two independent axes:
+  //   sh.theme  -> dark/light UI chrome
+  //   sh.table  -> table felt (midnight/casino/mahogany/cobalt/slate/crimson)
   (function() {
     try {
       var t = localStorage.getItem('sh.theme');
       if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+      var tbl = localStorage.getItem('sh.table');
+      var allowed = ['casino', 'mahogany', 'cobalt', 'slate', 'crimson'];
+      if (tbl && allowed.indexOf(tbl) !== -1) {
+        document.documentElement.setAttribute('data-table', tbl);
+      }
     } catch (e) {}
   })();
 </script>
@@ -63,6 +71,8 @@
       <p class="form-sub">You'll be the host. Share the room code so others can join.</p>
       <label class="field-label" for="create-name">Your Name</label>
       <input type="text" id="create-name" class="text-input" placeholder="Enter your name" maxlength="14" />
+      <label class="field-label">Choose Avatar</label>
+      <div id="create-avatar-picker" class="avatar-picker"></div>
       <button id="btn-create-go" class="primary-btn">Create Room</button>
     </div>
   </section>
@@ -78,6 +88,8 @@
       <input type="text" id="join-code" class="text-input code-input" placeholder="ABCD" maxlength="4" autocapitalize="characters" />
       <label class="field-label" for="join-name">Your Name</label>
       <input type="text" id="join-name" class="text-input" placeholder="Enter your name" maxlength="14" />
+      <label class="field-label">Choose Avatar</label>
+      <div id="join-avatar-picker" class="avatar-picker"></div>
       <button id="btn-join-go" class="primary-btn">Join Room</button>
     </div>
   </section>
@@ -295,8 +307,17 @@
 
   <div id="toast" class="toast"></div>
 
-  <!-- Top-right corner actions: theme toggle + GitHub repo link -->
+  <!-- Top-right corner actions: table picker + theme toggle + GitHub repo link -->
   <div class="corner-actions">
+    <button id="table-picker-btn" class="corner-btn" aria-label="Choose table theme" title="Choose table theme">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <!-- Stacked chips icon — three discs offset diagonally -->
+        <ellipse cx="9" cy="15" rx="6" ry="2.2"/>
+        <path d="M3 15v2c0 1.2 2.7 2.2 6 2.2s6-1 6-2.2v-2"/>
+        <ellipse cx="14" cy="9" rx="6" ry="2.2"/>
+        <path d="M8 9v2c0 1.2 2.7 2.2 6 2.2s6-1 6-2.2V9"/>
+      </svg>
+    </button>
     <button id="theme-toggle" class="corner-btn" aria-label="Toggle light/dark mode" title="Toggle light/dark mode">
       <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="4"/>
@@ -313,7 +334,33 @@
     </a>
   </div>
 
+  <!-- Table theme picker popover -->
+  <div id="table-picker" class="table-picker" role="menu" aria-label="Table theme">
+    <div class="table-picker-title">Card Table</div>
+    <div class="table-swatches">
+      <button class="swatch" data-table="" title="Midnight (default)">
+        <span class="swatch-chip" style="--sw-inner:#14172b;--sw-outer:#0a0a0f"></span>Midnight
+      </button>
+      <button class="swatch" data-table="casino" title="Casino felt">
+        <span class="swatch-chip" style="--sw-inner:#1d4d35;--sw-outer:#0a1d12"></span>Casino
+      </button>
+      <button class="swatch" data-table="mahogany" title="Mahogany wood">
+        <span class="swatch-chip" style="--sw-inner:#4a1f1a;--sw-outer:#1a0807"></span>Mahogany
+      </button>
+      <button class="swatch" data-table="cobalt" title="Cobalt blue">
+        <span class="swatch-chip" style="--sw-inner:#15356b;--sw-outer:#07112a"></span>Cobalt
+      </button>
+      <button class="swatch" data-table="slate" title="Slate stone">
+        <span class="swatch-chip" style="--sw-inner:#2a313d;--sw-outer:#11141a"></span>Slate
+      </button>
+      <button class="swatch" data-table="crimson" title="Crimson velvet">
+        <span class="swatch-chip" style="--sw-inner:#5a1620;--sw-outer:#1c0408"></span>Crimson
+      </button>
+    </div>
+  </div>
+
 </div>
+<script src="avatars.js"></script>
 <script src="client.js"></script>
 </body>
 </html>

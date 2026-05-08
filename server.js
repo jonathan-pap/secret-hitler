@@ -11,6 +11,19 @@ const path = require('path');
 const crypto = require('crypto');
 const { WebSocketServer } = require('ws');
 const { pickBotName, decideBotAction } = require('./bots');
+const AVATARS_API = require('./public/avatars.js');
+
+// Pick a random avatar key, preferring one not already taken in the room
+function pickAvatarFor(room) {
+  const taken = new Set((room.players || []).map(p => p.avatar).filter(Boolean));
+  const free = AVATARS_API.KEYS.filter(k => !taken.has(k));
+  const pool = free.length ? free : AVATARS_API.KEYS;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+function sanitizeAvatar(value, room) {
+  if (typeof value === 'string' && AVATARS_API.isValidKey(value)) return value;
+  return pickAvatarFor(room);
+}
 
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, 'public');
@@ -111,7 +124,7 @@ function saveState() {
         lastActivityAt: room.lastActivityAt,
         phase: room.phase,
         players: room.players.map(p => ({
-          token: p.token, name: p.name, role: p.role,
+          token: p.token, name: p.name, avatar: p.avatar, role: p.role,
           alive: p.alive, investigated: p.investigated,
           confirmedNotHitler: p.confirmedNotHitler,
           idx: p.idx, isBot: !!p.isBot,
@@ -287,6 +300,7 @@ function viewFor(room, token) {
       idx: p.idx,
       token: p.token,
       name: p.name,
+      avatar: p.avatar || null,
       alive: p.alive,
       investigated: p.investigated,
       confirmedNotHitler: !!p.confirmedNotHitler,
@@ -850,7 +864,8 @@ function onCreate(ws, msg) {
   if (!name) return send(ws, 'error', { message: 'Name required.' });
   const token = uid();
   const room = makeRoom(token);
-  const player = { token, name, role: null, alive: true, investigated: false, connected: true, idx: 0, isBot: false };
+  const avatar = sanitizeAvatar(msg.avatar, room);
+  const player = { token, name, avatar, role: null, alive: true, investigated: false, connected: true, idx: 0, isBot: false };
   room.players.push(player);
   room.sockets.set(token, ws);
   ws._roomCode = room.code;
@@ -871,7 +886,8 @@ function onJoin(ws, msg) {
     return send(ws, 'error', { message: 'Name already taken in this room.' });
 
   const token = uid();
-  const player = { token, name, role: null, alive: true, investigated: false, connected: true, idx: room.players.length, isBot: false };
+  const avatar = sanitizeAvatar(msg.avatar, room);
+  const player = { token, name, avatar, role: null, alive: true, investigated: false, connected: true, idx: room.players.length, isBot: false };
   room.players.push(player);
   room.sockets.set(token, ws);
   ws._roomCode = room.code;
@@ -889,8 +905,9 @@ function onAddBot(ws) {
   const taken = new Set(room.players.map(p => p.name.toLowerCase()));
   const name = pickBotName(taken);
   const token = uid();
+  const avatar = pickAvatarFor(room);
   const player = {
-    token, name, role: null, alive: true, investigated: false,
+    token, name, avatar, role: null, alive: true, investigated: false,
     connected: true, idx: room.players.length, isBot: true,
   };
   room.players.push(player);

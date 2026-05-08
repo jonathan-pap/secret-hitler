@@ -26,6 +26,23 @@ const POWER_ICONS = {
 
 // ---------- DOM helpers ----------
 const $ = (id) => document.getElementById(id);
+// Avatar helpers — turn an avatar key into inline SVG markup, falling back to
+// the player's first initial if no avatar is set or the key is unknown.
+function avatarSvg(key) {
+  const api = window.AVATARS_API;
+  if (!api) return '';
+  const found = api.AVATARS.find(a => a.key === key);
+  if (!found) return '';
+  return '<svg viewBox="0 0 64 64" fill="currentColor" aria-hidden="true">' + found.body + '</svg>';
+}
+function avatarMarkup(player) {
+  const svg = avatarSvg(player && player.avatar);
+  if (svg) return svg;
+  // Fallback: first initial as plain text
+  const name = (player && player.name) || '?';
+  return name.charAt(0).toUpperCase();
+}
+
 const el = (tag, attrs = {}, ...children) => {
   const node = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs)) {
@@ -157,14 +174,13 @@ function renderLobby(view) {
     if (p.token === view.youToken) cls.push('me');
     if (!p.connected) cls.push('disconnected');
     if (p.isBot) cls.push('bot');
-    const initial = p.name.charAt(0).toUpperCase();
     const tags = [];
     if (p.isHost) tags.push(['host', 'HOST']);
     if (p.token === view.youToken) tags.push(['you', 'YOU']);
     if (p.isBot) tags.push(['bot', 'AI']);
     if (!p.connected && !p.isBot) tags.push(['off', 'OFFLINE']);
     list.appendChild(el('div', { class: cls.join(' ') },
-      el('div', { class: 'lp-avatar' }, initial),
+      el('div', { class: 'lp-avatar', html: avatarMarkup(p) }),
       el('div', { class: 'lp-name' }, p.name),
       ...tags.map(([c, t]) => el('div', { class: 'lp-tag ' + c }, t)),
     ));
@@ -554,7 +570,6 @@ function renderPlayersRing(view) {
       }
     }
 
-    const initial = p.name.charAt(0).toUpperCase();
     let tag = '';
     let tagCls = '';
     if (p.idx === view.presidentIdx) { tag = 'PRESIDENT'; }
@@ -563,7 +578,7 @@ function renderPlayersRing(view) {
     else if (p.role === 'fascist') { tag = 'FASCIST'; tagCls = 'fascist-known'; }
 
     const pill = el('div', { class: cls.join(' '), 'data-id': p.idx },
-      el('div', { class: 'player-avatar' }, initial),
+      el('div', { class: 'player-avatar', html: avatarMarkup(p) }),
       el('div', { class: 'player-name' }, p.name),
       tag ? el('div', { class: 'player-role-tag ' + tagCls }, tag) : null,
     );
@@ -876,7 +891,7 @@ function renderEnd(view) {
     const cls = p.role === 'hitler' ? 'hitler' : p.role;
     const roleLabel = p.role === 'hitler' ? 'Hitler' : (p.role === 'liberal' ? 'Liberal' : 'Fascist');
     list.appendChild(el('div', { class: 'end-role-row ' + cls },
-      el('div', { class: 'er-avatar' }, p.name.charAt(0).toUpperCase()),
+      el('div', { class: 'er-avatar', html: avatarMarkup(p) }),
       el('div', { class: 'er-name' }, p.name + (p.alive ? '' : ' ✕')),
       el('div', { class: 'er-role' }, roleLabel),
     ));
@@ -1173,11 +1188,59 @@ document.addEventListener('DOMContentLoaded', () => {
     b.onclick = () => showScreen(b.dataset.back);
   });
 
+  // ---- Avatar picker (Create + Join screens) ----
+  // One picker per screen. Selection persists in localStorage so re-entering
+  // the create/join form remembers the last avatar chosen.
+  let createAvatar = null;
+  let joinAvatar = null;
+  function buildAvatarPicker(containerId, initial, onPick) {
+    const root = $(containerId);
+    if (!root || !window.AVATARS_API) return;
+    root.innerHTML = '';
+    const buttons = [];
+    window.AVATARS_API.AVATARS.forEach(av => {
+      const btn = el('button', {
+        class: 'ap-item',
+        type: 'button',
+        title: av.label,
+        'aria-label': av.label,
+        'data-key': av.key,
+        html: '<svg viewBox="0 0 64 64" fill="currentColor" aria-hidden="true">' + av.body + '</svg>',
+      });
+      btn.onclick = () => {
+        buttons.forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        onPick(av.key);
+      };
+      buttons.push(btn);
+      root.appendChild(btn);
+    });
+    // Apply initial selection (saved value or random)
+    let chosen = initial;
+    if (!chosen || !window.AVATARS_API.isValidKey(chosen)) {
+      chosen = window.AVATARS_API.randomKey();
+    }
+    const target = buttons.find(b => b.getAttribute('data-key') === chosen);
+    if (target) target.classList.add('selected');
+    onPick(chosen);
+  }
+
+  let savedAvatar = null;
+  try { savedAvatar = localStorage.getItem('sh.avatar'); } catch {}
+  buildAvatarPicker('create-avatar-picker', savedAvatar, k => {
+    createAvatar = k;
+    try { localStorage.setItem('sh.avatar', k); } catch {}
+  });
+  buildAvatarPicker('join-avatar-picker', savedAvatar, k => {
+    joinAvatar = k;
+    try { localStorage.setItem('sh.avatar', k); } catch {}
+  });
+
   // Create
   $('btn-create-go').onclick = () => {
     const name = $('create-name').value.trim();
     if (!name) return toast('Please enter your name.', 2000, true);
-    send('create', { name });
+    send('create', { name, avatar: createAvatar });
   };
   $('create-name').addEventListener('keydown', e => {
     if (e.key === 'Enter') $('btn-create-go').click();
@@ -1189,7 +1252,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const name = $('join-name').value.trim();
     if (!code) return toast('Enter the room code.', 2000, true);
     if (!name) return toast('Please enter your name.', 2000, true);
-    send('join', { code, name });
+    send('join', { code, name, avatar: joinAvatar });
   };
   $('join-code').addEventListener('input', e => {
     e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
@@ -1240,6 +1303,53 @@ document.addEventListener('DOMContentLoaded', () => {
         try { localStorage.setItem('sh.theme', 'light'); } catch {}
       }
     };
+  }
+
+  // Card table theme picker — orthogonal to dark/light.
+  // Six options including default Midnight (empty data-table).
+  const tablePickerBtn = $('table-picker-btn');
+  const tablePicker = $('table-picker');
+  if (tablePickerBtn && tablePicker) {
+    const swatches = tablePicker.querySelectorAll('.swatch');
+    const markActive = () => {
+      const current = document.documentElement.getAttribute('data-table') || '';
+      swatches.forEach(s => {
+        s.classList.toggle('active', (s.getAttribute('data-table') || '') === current);
+      });
+    };
+    markActive();
+
+    tablePickerBtn.onclick = (e) => {
+      e.stopPropagation();
+      tablePicker.classList.toggle('open');
+      markActive();
+    };
+
+    swatches.forEach(s => {
+      s.onclick = (e) => {
+        e.stopPropagation();
+        const val = s.getAttribute('data-table') || '';
+        if (val) {
+          document.documentElement.setAttribute('data-table', val);
+        } else {
+          document.documentElement.removeAttribute('data-table');
+        }
+        try { localStorage.setItem('sh.table', val); } catch {}
+        markActive();
+        // Brief delay so the user sees the active highlight, then close
+        setTimeout(() => tablePicker.classList.remove('open'), 180);
+      };
+    });
+
+    // Click outside or press Escape to close
+    document.addEventListener('click', (e) => {
+      if (!tablePicker.classList.contains('open')) return;
+      if (tablePicker.contains(e.target) || tablePickerBtn.contains(e.target)) return;
+      tablePicker.classList.remove('open');
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') tablePicker.classList.remove('open');
+    });
   }
 
   // Auto-fill code from URL on welcome
